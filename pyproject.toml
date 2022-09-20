@@ -1,0 +1,22 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.flake8]
+max-line-length = 120
+
+[tool.poetry]
+name = "django-triggers"
+version = "0.1.0"
+description = ""
+authors = []
+readme = "README.md"
+packages = [{include = "triggers"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^5.0.4"
+Flake8-pyproject = "^1.1.0.post0"
+mypy = "^0.971"
