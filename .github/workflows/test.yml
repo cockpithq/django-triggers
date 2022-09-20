@@ -1,0 +1,15 @@
+name: Test
+on: push
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install poetry
+        run: python3 -m pip install poetry -U
+      - name: Install dependencies
+        run: poetry install --with dev
+      - name: Run flake8
+        run: poetry run flake8 triggers
+      - name: Run mypy
+        run: poetry run mypy triggers
