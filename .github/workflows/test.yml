@@ -5,6 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Install poetry
+        run: python3 -m pip install poetry -U
       - name: Install dependencies
         run: poetry install --with dev
       - name: Run flake8
