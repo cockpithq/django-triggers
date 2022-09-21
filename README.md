@@ -2,11 +2,16 @@
 
 ## Development
 
+### Run a django-admin command, e.g. `makemigrations`
+```shell
+poetry run python -m django makemigrations --settings=tests.app.settings
+```
+
 ### Run flake8
 ```shell
-poetry run flake8 triggers
+poetry run flake8 triggers tests
 ```
 ### Run mypy
 ```shell
-poetry run mypy triggers
+poetry run mypy triggers tests
 ```

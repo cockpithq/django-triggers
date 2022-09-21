@@ -15,8 +15,11 @@ packages = [{include = "triggers"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
+Django = "^4.1.1"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^5.0.4"
 Flake8-pyproject = "^1.1.0.post0"
 mypy = "^0.971"
+django-stubs = "^1.12.0"
+flake8-django = "^1.1.5"
