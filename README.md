@@ -7,6 +7,10 @@
 poetry run python -m django makemigrations --settings=tests.app.settings
 ```
 
+### Run isort
+```shell
+poetry run isort triggers tests
+```
 ### Run flake8
 ```shell
 poetry run flake8 triggers tests

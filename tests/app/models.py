@@ -2,12 +2,12 @@ from django.contrib.auth.models import User
 from django.db import models, transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.template import Template, Context
+from django.template import Context, Template
 from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 
-from triggers.models import Condition, Event, Action
+from triggers.models import Action, Condition, Event
 
 
 class AppSession(models.Model):

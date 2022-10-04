@@ -1,8 +1,7 @@
 from typing import Any, Mapping, Optional
 
 from django.contrib.auth import get_user_model
-from django.db import models
-from django.db import transaction
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
 
