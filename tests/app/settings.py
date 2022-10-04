@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'polymorphic',
     'triggers',
+    'tests.app',
 ]
 
 MIDDLEWARE = [

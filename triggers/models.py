@@ -1,10 +1,8 @@
 from typing import Any, Mapping, Optional
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db import transaction
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
 
@@ -22,7 +20,8 @@ class Trigger(PolymorphicModel):
         return self.name
 
     def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
-        for condition in self.conditions:
+        condition: Condition
+        for condition in self.conditions.all():
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
 
@@ -31,63 +30,28 @@ class Trigger(PolymorphicModel):
             if all(condition.is_satisfied(user) for condition in self.conditions.all()):
                 yield user
 
-    def on_event(self, event: 'Event', user_queryset: models.QuerySet):
+    def on_event(self, event: 'Event', user_queryset: models.QuerySet, context: Mapping[str, Any]):
         if not hasattr(self, 'action'):
             return
         for user in self.iter_users(user_queryset):
-            self.action.perform_and_track(user, event)
+            self.action.perform_and_track(user, event, context)
 
 
 class Action(PolymorphicModel):
     trigger = models.OneToOneField(Trigger, on_delete=models.CASCADE, related_name='action')
 
     @transaction.atomic
-    def perform_and_track(self, user, event: 'Event'):
-        context = event.get_context(user)
-        self.perform(user, context)
-        PerformedAction.objects.create(
-            trigger=self.trigger,
-            event=str(event),
-            conditions='\n'.join(str(condition) for condition in self.trigger.conditions),
-            action=str(self)
-        )
+    def perform_and_track(self, user, event: 'Event', context: Mapping[str, Any]):
+        user_context = event.get_user_context(user, context)
+        self.perform(user, user_context)
 
     def perform(self, user, context: Mapping[str, Any]):
         raise NotImplementedError()
 
 
-class PerformedAction(models.Model):
-    trigger = models.ForeignKey(
-        Trigger,
-        on_delete=models.CASCADE,
-        verbose_name=_('trigger'),
-        related_name='performed_actions',
-        related_query_name='performed_action',
-    )
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        verbose_name=_('user'),
-        on_delete=models.CASCADE,
-        related_name='performed_actions',
-        related_query_name='performed_action',
-    )
-    datetime = models.DateTimeField(_('date'), default=timezone.now)
-    event = models.TextField(_('event'))
-    conditions = models.TextField(_('conditions'))
-    action = models.TextField(_('action'))
-
-    class Meta:
-        verbose_name = _('performed action')
-        verbose_name_plural = _('performed actions')
-        index_together = (('datetime', 'trigger', 'user'),)
-
-    def __str__(self) -> str:
-        return str(self.__class__._meta.verbose_name)  # noqa
-
-
 class Event(PolymorphicModel):
     trigger = models.ForeignKey(
-        Action,
+        Trigger,
         verbose_name=_('trigger'),
         on_delete=models.CASCADE,
         related_name='events',
@@ -104,15 +68,17 @@ class Event(PolymorphicModel):
     def should_be_fired(self, **kwargs) -> bool:
         return True
 
-    def get_context(self, user, **kwargs) -> Mapping[str, Any]:
-        return kwargs
+    def get_user_context(self, user, context) -> Mapping[str, Any]:
+        user_context = {'user': user}
+        user_context.update(context)
+        return user_context
 
     def fire(self, user_queryset: models.QuerySet, **kwargs) -> None:
         if self.should_be_fired(**kwargs):
-            self.trigger.on_event(self, user_queryset)
+            self.trigger.on_event(self, user_queryset, kwargs)
 
-    def fire_single(self, user_pk: Any):
-        self.fire(User.objects.filter(pk=user_pk))
+    def fire_single(self, user_pk: Any, **kwargs):
+        self.fire(User.objects.filter(pk=user_pk), **kwargs)
 
 
 class Condition(PolymorphicModel):
@@ -140,8 +106,8 @@ class Condition(PolymorphicModel):
         return True
 
     def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
-        if self.filter_q:
+        if self.filter_users_q:
             user_queryset = user_queryset.filter(self.filter_users_q)
-        if self.exclude_q:
+        if self.exclude_users_q:
             user_queryset = user_queryset.exclude(self.exclude_users_q)
         return user_queryset

@@ -15,3 +15,7 @@ poetry run flake8 triggers tests
 ```shell
 poetry run mypy triggers tests
 ```
+### Run pytest
+```shell
+poetry run pytest
+```
