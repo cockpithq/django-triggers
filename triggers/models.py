@@ -10,6 +10,7 @@ User = get_user_model()
 
 class Trigger(PolymorphicModel):
     name = models.CharField(_('name'), max_length=64, unique=True)
+    is_enabled = models.BooleanField(_('enabled'), default=False)
 
     class Meta:
         verbose_name = _('action')
@@ -73,7 +74,7 @@ class Event(PolymorphicModel):
         return user_context
 
     def fire(self, user_queryset: models.QuerySet, **kwargs) -> None:
-        if self.should_be_fired(**kwargs):
+        if self.trigger.is_enabled and self.should_be_fired(**kwargs):
             self.trigger.on_event(self, user_queryset, kwargs)
 
     def fire_single(self, user_pk: Any, **kwargs):

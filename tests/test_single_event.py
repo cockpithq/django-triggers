@@ -14,7 +14,7 @@ def user() -> User:
 
 @pytest.fixture()
 def trigger() -> Trigger:
-    return baker.make(Trigger)
+    return baker.make(Trigger, is_enabled=True)
 
 
 @pytest.fixture()
@@ -52,14 +52,25 @@ def app_session(user: User, desired_app: str) -> AppSession:
 
 
 @pytest.mark.django_db
-def test_event_filter_is_matched_and_condition_is_satisfied(user: User, desired_app: str):
+@pytest.mark.parametrize('is_trigger_enabled', (True, False))
+def test_event_filter_is_matched_and_condition_is_satisfied(
+    user: User,
+    desired_app: str,
+    trigger: Trigger,
+    is_trigger_enabled: bool,
+):
+    trigger.is_enabled = is_trigger_enabled
+    trigger.save()
     user.app_sessions.create(app=desired_app)
     assert not user.messages.all().count()
     run_on_commit()
     message = user.messages.first()
-    assert message
-    assert user.first_name.capitalize() in message.text
-    assert desired_app in message.text
+    if is_trigger_enabled:
+        assert message
+        assert user.first_name.capitalize() in message.text
+        assert desired_app in message.text
+    else:
+        assert not message
 
 
 @pytest.mark.django_db
