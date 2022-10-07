@@ -2,6 +2,7 @@ from typing import Any, Mapping, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +14,21 @@ User = get_user_model()
 class Trigger(PolymorphicModel):
     name = models.CharField(_('name'), max_length=64, unique=True)
     is_enabled = models.BooleanField(_('enabled'), default=False)
+    number_limit = models.PositiveIntegerField(
+        _('number limit'),
+        default=1,
+        help_text=_('Maximal number of actions that can be triggered for the user.'),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+    )
+    frequency_limit = models.DurationField(
+        _('frequency limit'),
+        default=timezone.timedelta(days=30),
+        help_text=_('Minimal period of time that should run out before the next action can be triggered.'),
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = _('action')
@@ -83,6 +99,12 @@ class Action(PolymorphicModel):
         user_context = event.get_user_context(user, context)
         activity, _created = self.trigger.activities.get_or_create(user=user)
         activity = Activity.objects.filter(id=activity.id).select_for_update().get()
+        if self.trigger.number_limit is not None:
+            if activity.execution_count >= self.trigger.number_limit:
+                return
+        if self.trigger.frequency_limit is not None and activity.last_execution_datetime:
+            if timezone.now() - activity.last_execution_datetime < self.trigger.frequency_limit:
+                return
         self.perform(user, user_context)
         activity.execution_count += 1
         activity.last_execution_datetime = timezone.now()
