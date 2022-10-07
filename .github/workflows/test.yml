@@ -10,6 +10,10 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev
       - name: Run flake8
-        run: poetry run flake8 triggers
+        run: poetry run flake8 triggers tests
+      - name: Run isort
+        run: poetry run isort --check triggers tests
       - name: Run mypy
-        run: poetry run mypy triggers
+        run: poetry run mypy triggers tests
+      - name: Run pytest
+        run: poetry run pytest

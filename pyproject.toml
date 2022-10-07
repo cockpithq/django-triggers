@@ -2,9 +2,6 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.flake8]
-max-line-length = 120
-
 [tool.poetry]
 name = "django-triggers"
 version = "0.1.0"
@@ -16,6 +13,7 @@ packages = [{include = "triggers"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 Django = "^4.1.1"
+django-polymorphic = "^3.1.0"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^5.0.4"
@@ -23,3 +21,35 @@ Flake8-pyproject = "^1.1.0.post0"
 mypy = "^0.971"
 django-stubs = "^1.12.0"
 flake8-django = "^1.1.5"
+pytest = "^7.1.3"
+model-bakery = "^1.7.0"
+pytest-django = "^4.5.2"
+isort = "^5.10.1"
+
+[tool.flake8]
+max-line-length = 120
+exclude = [
+    "*/migrations/*.py"
+]
+
+[tool.django-stubs]
+django_settings_module = "tests.app.settings"
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+
+[[tool.mypy.overrides]]
+module = [
+    "polymorphic.models"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.app.settings"
+
+[tool.isort]
+force_sort_within_sections = true
+include_trailing_comma = true
+line_length = 120
+multi_line_output = 3
+use_parentheses = true
