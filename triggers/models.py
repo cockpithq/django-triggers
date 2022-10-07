@@ -1,4 +1,5 @@
-from typing import Any, Mapping, Optional
+from contextlib import contextmanager
+from typing import Any, Generator, Mapping, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -52,7 +53,15 @@ class Trigger(PolymorphicModel):
         if not hasattr(self, 'action'):
             return
         for user in self.iter_users(user_queryset):
-            self.action.execute(user, event, context)
+            user_context = event.get_user_context(user, context)
+            with Activity.lock(user, self) as activity:
+                if self.number_limit is not None:
+                    if activity.execution_count >= self.number_limit:
+                        raise Activity.Cancel()
+                if self.frequency_limit is not None and activity.last_execution_datetime:
+                    if timezone.now() - activity.last_execution_datetime < self.frequency_limit:
+                        raise Activity.Cancel()
+                self.action.perform(user, user_context)
 
 
 class Activity(PolymorphicModel):
@@ -78,6 +87,24 @@ class Activity(PolymorphicModel):
         verbose_name_plural = _('trigger activities')
         unique_together = (('trigger', 'user'),)
 
+    class Cancel(Exception):
+        pass
+
+    @classmethod
+    @contextmanager
+    def lock(cls, user, trigger: Trigger) -> Generator['Activity', None, None]:
+        activity, _created = trigger.activities.get_or_create(user=user)
+        with transaction.atomic():
+            activity = Activity.objects.filter(id=activity.id).select_for_update().get()
+            try:
+                yield activity
+            except cls.Cancel:
+                pass
+            else:
+                activity.execution_count += 1
+                activity.last_execution_datetime = timezone.now()
+                activity.save()
+
 
 class Action(PolymorphicModel):
     trigger = models.OneToOneField(
@@ -93,22 +120,6 @@ class Action(PolymorphicModel):
 
     def __str__(self) -> str:
         return str(self.__class__._meta.verbose_name)  # noqa
-
-    @transaction.atomic
-    def execute(self, user, event: 'Event', context: Mapping[str, Any]):
-        user_context = event.get_user_context(user, context)
-        activity, _created = self.trigger.activities.get_or_create(user=user)
-        activity = Activity.objects.filter(id=activity.id).select_for_update().get()
-        if self.trigger.number_limit is not None:
-            if activity.execution_count >= self.trigger.number_limit:
-                return
-        if self.trigger.frequency_limit is not None and activity.last_execution_datetime:
-            if timezone.now() - activity.last_execution_datetime < self.trigger.frequency_limit:
-                return
-        self.perform(user, user_context)
-        activity.execution_count += 1
-        activity.last_execution_datetime = timezone.now()
-        activity.save()
 
     def perform(self, user, context: Mapping[str, Any]):
         raise NotImplementedError()
