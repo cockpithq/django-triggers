@@ -1,7 +1,9 @@
 from typing import Any, Mapping, Optional
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
 
@@ -34,16 +36,57 @@ class Trigger(PolymorphicModel):
         if not hasattr(self, 'action'):
             return
         for user in self.iter_users(user_queryset):
-            self.action.perform_and_track(user, event, context)
+            self.action.execute(user, event, context)
+
+
+class Activity(PolymorphicModel):
+    trigger = models.ForeignKey(
+        to=Trigger,
+        on_delete=models.CASCADE,
+        related_name='activities',
+        related_query_name='activity',
+        verbose_name=_('trigger'),
+    )
+    user = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='trigger_activities',
+        related_query_name='trigger_activity',
+        verbose_name=_('user'),
+    )
+    last_execution_datetime = models.DateTimeField(_('executed at'), blank=True, null=True)
+    execution_count = models.PositiveIntegerField(_('number of executions'), default=0)
+
+    class Meta:
+        verbose_name = _('trigger activity')
+        verbose_name_plural = _('trigger activities')
+        unique_together = (('trigger', 'user'),)
 
 
 class Action(PolymorphicModel):
-    trigger = models.OneToOneField(Trigger, on_delete=models.CASCADE, related_name='action')
+    trigger = models.OneToOneField(
+        to=Trigger,
+        on_delete=models.CASCADE,
+        related_name='action',
+        verbose_name=_('trigger'),
+    )
+
+    class Meta:
+        verbose_name = _('action')
+        verbose_name_plural = _('actions')
+
+    def __str__(self) -> str:
+        return str(self.__class__._meta.verbose_name)  # noqa
 
     @transaction.atomic
-    def perform_and_track(self, user, event: 'Event', context: Mapping[str, Any]):
+    def execute(self, user, event: 'Event', context: Mapping[str, Any]):
         user_context = event.get_user_context(user, context)
+        activity, _created = self.trigger.activities.get_or_create(user=user)
+        activity = Activity.objects.filter(id=activity.id).select_for_update().get()
         self.perform(user, user_context)
+        activity.execution_count += 1
+        activity.last_execution_datetime = timezone.now()
+        activity.save()
 
     def perform(self, user, context: Mapping[str, Any]):
         raise NotImplementedError()

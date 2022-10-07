@@ -69,6 +69,7 @@ def test_event_filter_is_matched_and_condition_is_satisfied(
         assert message
         assert user.first_name.capitalize() in message.text
         assert desired_app in message.text
+        assert trigger.activities.filter(user=user, execution_count=1).exists()
     else:
         assert not message
 
