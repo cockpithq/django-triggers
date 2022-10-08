@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.dispatch import Signal
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
@@ -49,10 +50,8 @@ class Trigger(PolymorphicModel):
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
 
-    def on_event(self, event: 'Event', user_pk, **context: Any):
-        user = self.filter_user_queryset(User.objects.filter(pk=user_pk)).get()
-        if all(condition.is_satisfied(user) for condition in self.conditions.all()):
-            user_context = event.get_user_context(user, context)
+    def on_event(self, user, context: Mapping[str, Any]):
+        if user and all(condition.is_satisfied(user) for condition in self.conditions.all()):
             with Activity.lock(user, self) as activity:
                 if self.action_count_limit is not None:
                     if activity.action_count >= self.action_count_limit:
@@ -60,7 +59,7 @@ class Trigger(PolymorphicModel):
                 if self.action_frequency_limit is not None and activity.last_action_datetime:
                     if timezone.now() - activity.last_action_datetime < self.action_frequency_limit:
                         raise Activity.Cancel()
-                self.action.perform(user, user_context)
+                self.action.perform(user, context)
 
 
 class Activity(PolymorphicModel):
@@ -132,6 +131,7 @@ class Event(PolymorphicModel):
         related_name='events',
         related_query_name='event',
     )
+    fired = Signal()
 
     class Meta:
         verbose_name = _('event')
@@ -152,10 +152,16 @@ class Event(PolymorphicModel):
         if self.should_be_fired(**kwargs):
             prefiltered_user_queryset = self.trigger.filter_user_queryset(user_queryset)
             for user_pk in prefiltered_user_queryset.values_list('pk', flat=True).iterator():
-                self.trigger.on_event(self, user_pk, **kwargs)
+                self.fired.send(self.__class__, event=self, user_pk=user_pk, **kwargs)
 
     def fire_single(self, user_pk: Any, **kwargs):
         self.fire(User.objects.filter(pk=user_pk), **kwargs)
+
+    def handle(self, user_pk, **context):
+        user = self.trigger.filter_user_queryset(User.objects.filter(pk=user_pk)).first()
+        if user:
+            user_context = self.get_user_context(user, context)
+            self.trigger.on_event(user, user_context)
 
 
 class Condition(PolymorphicModel):
