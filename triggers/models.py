@@ -49,14 +49,9 @@ class Trigger(PolymorphicModel):
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
 
-    def iter_users(self, user_queryset: models.QuerySet):
-        for user in self.filter_user_queryset(user_queryset).iterator():
-            if all(condition.is_satisfied(user) for condition in self.conditions.all()):
-                yield user
-
-    def on_event(self, event_id: int, user_pk: Any, **context: Any):
-        event: Event = Event.objects.get(id=event_id)
-        for user in self.iter_users(User.objects.filter(pk=user_pk)):
+    def on_event(self, event: 'Event', user_pk, **context: Any):
+        user = self.filter_user_queryset(User.objects.filter(pk=user_pk)).get()
+        if all(condition.is_satisfied(user) for condition in self.conditions.all()):
             user_context = event.get_user_context(user, context)
             with Activity.lock(user, self) as activity:
                 if self.action_count_limit is not None:
@@ -156,8 +151,8 @@ class Event(PolymorphicModel):
     def fire(self, user_queryset: models.QuerySet, **kwargs) -> None:
         if self.should_be_fired(**kwargs):
             prefiltered_user_queryset = self.trigger.filter_user_queryset(user_queryset)
-            for user_pk in prefiltered_user_queryset.values_list('pk', flat=True):
-                self.trigger.on_event(self.id, user_pk, **kwargs)
+            for user_pk in prefiltered_user_queryset.values_list('pk', flat=True).iterator():
+                self.trigger.on_event(self, user_pk, **kwargs)
 
     def fire_single(self, user_pk: Any, **kwargs):
         self.fire(User.objects.filter(pk=user_pk), **kwargs)
