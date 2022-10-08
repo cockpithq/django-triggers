@@ -43,7 +43,8 @@ class Trigger(PolymorphicModel):
         return self.is_enabled and hasattr(self, 'action')
 
     def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
-        condition: Condition
+        if not self.is_active:
+            return user_queryset.none()
         for condition in self.conditions.all():
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
@@ -53,18 +54,18 @@ class Trigger(PolymorphicModel):
             if all(condition.is_satisfied(user) for condition in self.conditions.all()):
                 yield user
 
-    def on_event(self, event: 'Event', user_queryset: models.QuerySet, context: Mapping[str, Any]):
-        if self.is_active:
-            for user in self.iter_users(user_queryset):
-                user_context = event.get_user_context(user, context)
-                with Activity.lock(user, self) as activity:
-                    if self.action_count_limit is not None:
-                        if activity.action_count >= self.action_count_limit:
-                            raise Activity.Cancel()
-                    if self.action_frequency_limit is not None and activity.last_action_datetime:
-                        if timezone.now() - activity.last_action_datetime < self.action_frequency_limit:
-                            raise Activity.Cancel()
-                    self.action.perform(user, user_context)
+    def on_event(self, event_id: int, user_pk: Any, **context: Any):
+        event: Event = Event.objects.get(id=event_id)
+        for user in self.iter_users(User.objects.filter(pk=user_pk)):
+            user_context = event.get_user_context(user, context)
+            with Activity.lock(user, self) as activity:
+                if self.action_count_limit is not None:
+                    if activity.action_count >= self.action_count_limit:
+                        raise Activity.Cancel()
+                if self.action_frequency_limit is not None and activity.last_action_datetime:
+                    if timezone.now() - activity.last_action_datetime < self.action_frequency_limit:
+                        raise Activity.Cancel()
+                self.action.perform(user, user_context)
 
 
 class Activity(PolymorphicModel):
@@ -154,7 +155,9 @@ class Event(PolymorphicModel):
 
     def fire(self, user_queryset: models.QuerySet, **kwargs) -> None:
         if self.should_be_fired(**kwargs):
-            self.trigger.on_event(self, user_queryset, kwargs)
+            prefiltered_user_queryset = self.trigger.filter_user_queryset(user_queryset)
+            for user_pk in prefiltered_user_queryset.values_list('pk', flat=True):
+                self.trigger.on_event(self.id, user_pk, **kwargs)
 
     def fire_single(self, user_pk: Any, **kwargs):
         self.fire(User.objects.filter(pk=user_pk), **kwargs)
