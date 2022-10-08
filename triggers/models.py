@@ -15,16 +15,16 @@ User = get_user_model()
 class Trigger(PolymorphicModel):
     name = models.CharField(_('name'), max_length=64, unique=True)
     is_enabled = models.BooleanField(_('enabled'), default=False)
-    number_limit = models.PositiveIntegerField(
-        _('number limit'),
+    action_count_limit = models.PositiveIntegerField(
+        _('action count limit'),
         default=1,
         help_text=_('Maximal number of actions that can be triggered for the user.'),
         null=True,
         blank=True,
         validators=[MinValueValidator(1)],
     )
-    frequency_limit = models.DurationField(
-        _('frequency limit'),
+    action_frequency_limit = models.DurationField(
+        _('action frequency limit'),
         default=timezone.timedelta(days=30),
         help_text=_('Minimal period of time that should run out before the next action can be triggered.'),
         null=True,
@@ -58,11 +58,11 @@ class Trigger(PolymorphicModel):
             for user in self.iter_users(user_queryset):
                 user_context = event.get_user_context(user, context)
                 with Activity.lock(user, self) as activity:
-                    if self.number_limit is not None:
-                        if activity.execution_count >= self.number_limit:
+                    if self.action_count_limit is not None:
+                        if activity.action_count >= self.action_count_limit:
                             raise Activity.Cancel()
-                    if self.frequency_limit is not None and activity.last_execution_datetime:
-                        if timezone.now() - activity.last_execution_datetime < self.frequency_limit:
+                    if self.action_frequency_limit is not None and activity.last_action_datetime:
+                        if timezone.now() - activity.last_action_datetime < self.action_frequency_limit:
                             raise Activity.Cancel()
                     self.action.perform(user, user_context)
 
@@ -82,8 +82,8 @@ class Activity(PolymorphicModel):
         related_query_name='trigger_activity',
         verbose_name=_('user'),
     )
-    last_execution_datetime = models.DateTimeField(_('executed at'), blank=True, null=True)
-    execution_count = models.PositiveIntegerField(_('number of executions'), default=0)
+    last_action_datetime = models.DateTimeField(_('last action'), blank=True, null=True)
+    action_count = models.PositiveIntegerField(_('actions'), default=0)
 
     class Meta:
         verbose_name = _('trigger activity')
@@ -104,8 +104,8 @@ class Activity(PolymorphicModel):
             except cls.Cancel:
                 pass
             else:
-                activity.execution_count += 1
-                activity.last_execution_datetime = timezone.now()
+                activity.action_count += 1
+                activity.last_action_datetime = timezone.now()
                 activity.save()
 
 
