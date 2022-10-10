@@ -44,6 +44,7 @@ plugins = ["mypy_django_plugin.main"]
 
 [[tool.mypy.overrides]]
 module = [
+    "polymorphic.admin",
     "polymorphic.models"
 ]
 ignore_missing_imports = true

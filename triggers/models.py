@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Any, Generator, Mapping, Optional
+from typing import Any, Generator, Mapping, Optional, Type
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,6 +11,10 @@ from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
 
 User = get_user_model()
+
+
+def get_model_name(model: Type[models.Model]) -> str:
+    return str(model._meta.verbose_name)  # noqa
 
 
 class Trigger(PolymorphicModel):
@@ -33,8 +37,8 @@ class Trigger(PolymorphicModel):
     )
 
     class Meta:
-        verbose_name = _('action')
-        verbose_name_plural = _('actions')
+        verbose_name = _('trigger')
+        verbose_name_plural = _('triggers')
 
     def __str__(self):
         return self.name
@@ -81,8 +85,8 @@ class Activity(PolymorphicModel):
     action_count = models.PositiveIntegerField(_('actions'), default=0)
 
     class Meta:
-        verbose_name = _('trigger activity')
-        verbose_name_plural = _('trigger activities')
+        verbose_name = _('activity')
+        verbose_name_plural = _('activities')
         unique_together = (('trigger', 'user'),)
 
     class Cancel(Exception):
@@ -117,7 +121,7 @@ class Action(PolymorphicModel):
         verbose_name_plural = _('actions')
 
     def __str__(self) -> str:
-        return str(self.__class__._meta.verbose_name)  # noqa
+        return get_model_name(self.__class__)
 
     def perform(self, user, context: Mapping[str, Any]):
         raise NotImplementedError()
@@ -138,7 +142,7 @@ class Event(PolymorphicModel):
         verbose_name_plural = _('events')
 
     def __str__(self) -> str:
-        return str(self.__class__._meta.verbose_name)  # noqa
+        return get_model_name(self.__class__)
 
     def should_be_fired(self, **kwargs) -> bool:
         return True
@@ -176,6 +180,9 @@ class Condition(PolymorphicModel):
     class Meta:
         verbose_name = _('condition')
         verbose_name_plural = _('conditions')
+
+    def __str__(self) -> str:
+        return get_model_name(self.__class__)
 
     @property
     def filter_users_q(self) -> Optional[models.Q]:

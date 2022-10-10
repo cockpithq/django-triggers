@@ -58,6 +58,14 @@ class Message(models.Model):
 class AppSessionStartedEvent(Event):  # type: ignore[django-manager-missing]
     app = models.CharField(_('application'), max_length=16, choices=AppSession.APP_CHOICES, blank=True)
 
+    class Meta:
+        verbose_name = _('app session started')
+        verbose_name_plural = _('app session started')
+
+    def __str__(self):
+        app_name: str = self.get_app_display() if self.app else _('any')
+        return f'{app_name.capitalize()} {super().__str__()}'
+
     def should_be_fired(self, **kwargs) -> bool:
         if self.app:
             if kwargs.pop('app') != self.app:
@@ -68,6 +76,14 @@ class AppSessionStartedEvent(Event):  # type: ignore[django-manager-missing]
 class AppSessionCountCondition(Condition):  # type: ignore[django-manager-missing]
     app = models.CharField(_('application'), max_length=16, choices=AppSession.APP_CHOICES, blank=True)
     count = models.PositiveIntegerField(_('app session count'))
+
+    class Meta:
+        verbose_name = _('app session count')
+        verbose_name_plural = _('app session count')
+
+    def __str__(self):
+        app_name: str = self.get_app_display() if self.app else _('any')
+        return f'{app_name.capitalize()} {super().__str__()} is {self.count}'
 
     def is_satisfied(self, user) -> bool:
         app_sessions = user.app_sessions.all()
@@ -90,6 +106,9 @@ class SendMessageAction(Action):  # type: ignore[django-manager-missing]
     class Meta:
         verbose_name = _('send message')
         verbose_name_plural = _('send messages')
+
+    def __str__(self):
+        return f'{super().__str__()} {self.text}'
 
     def perform(self, user, context):
         text_template = Template(self.text)
