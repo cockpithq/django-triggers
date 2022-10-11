@@ -1,0 +1,14 @@
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install poetry
+        run: python3 -m pip install poetry -U
+      - name: Build
+        run: poetry build
+      - name: Publish
+        run: poetry publish --username=${{ secrets.PYPI_USERNAME }} --password=${{ secrets.PYPI_PASSWORD }}
