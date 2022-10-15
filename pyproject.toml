@@ -14,7 +14,7 @@ packages = [{include = "triggers"}]
 python = "^3.7"
 Django = ">=3"
 django-polymorphic = "^3.1.0"
-celery = "^5.2.7"
+celery = ">=5"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^5.0.4"
