@@ -4,15 +4,15 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "dj-triggers"
-version = "0.2.0"
+version = "0.3.0"
 description = ""
 authors = []
 readme = "README.md"
 packages = [{include = "triggers"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-Django = "^4.1.1"
+python = "^3.7"
+Django = ">=3"
 django-polymorphic = "^3.1.0"
 celery = "^5.2.7"
 
@@ -49,8 +49,8 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "tests.app.settings"
 addopts = [
+    "--ds=tests.app.settings",
     "--cov=triggers",
     "--cov-report=term-missing:skip-covered"
 ]
