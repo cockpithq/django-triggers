@@ -620,7 +620,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "92f840817d278f0a162924b203ef58c2b0855318ec4941dceb66e030f5f002d6"
+content-hash = "0828d1ebc66c9743374b78c4989a77da5a5afd5fe920781dcb1eafdfd3050b99"
 
 [metadata.files]
 amqp = [
