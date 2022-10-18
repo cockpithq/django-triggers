@@ -94,7 +94,7 @@ class ActivityActionAdmin(admin.ModelAdmin):
     list_display = 'trigger', 'user', 'last_action_datetime', 'action_count',
     list_filter = 'trigger',
     readonly_fields = list_display
-    search_fields = tuple({f'=user__{User.EMAIL_FIELD}', f'=user__{User.USERNAME_FIELD}'})
+    search_fields = tuple({f'=user__{User.get_email_field_name()}', f'=user__{User.USERNAME_FIELD}'})
 
     def has_add_permission(self, request, obj=None):
         return False
