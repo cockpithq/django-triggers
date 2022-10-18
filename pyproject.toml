@@ -9,6 +9,7 @@ description = ""
 authors = []
 readme = "README.md"
 packages = [{include = "triggers"}]
+repository = "https://github.com/cockpithq/django-triggers"
 
 [tool.poetry.dependencies]
 python = "^3.7"
