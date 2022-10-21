@@ -20,21 +20,6 @@ def get_model_name(model: Type[models.Model]) -> str:
 class Trigger(PolymorphicModel):
     name = models.CharField(_('name'), max_length=64, unique=True)
     is_enabled = models.BooleanField(_('enabled'), default=False)
-    action_count_limit = models.PositiveIntegerField(
-        _('action count limit'),
-        default=1,
-        help_text=_('Maximal number of actions that can be triggered for the user.'),
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(1)],
-    )
-    action_frequency_limit = models.DurationField(
-        _('action frequency limit'),
-        default=timezone.timedelta(days=30),
-        help_text=_('Minimal period of time that should run out before the next action can be triggered.'),
-        null=True,
-        blank=True,
-    )
 
     class Meta:
         verbose_name = _('trigger')
@@ -56,13 +41,7 @@ class Trigger(PolymorphicModel):
 
     def on_event(self, user, context: Mapping[str, Any]):
         if user and all(condition.is_satisfied(user) for condition in self.conditions.all()):
-            with Activity.lock(user, self) as activity:
-                if self.action_count_limit is not None:
-                    if activity.action_count >= self.action_count_limit:
-                        raise Activity.Cancel()
-                if self.action_frequency_limit is not None and activity.last_action_datetime:
-                    if timezone.now() - activity.last_action_datetime < self.action_frequency_limit:
-                        raise Activity.Cancel()
+            with Activity.lock(user, self):
                 self.action.perform(user, context)
 
 
@@ -162,7 +141,8 @@ class Event(PolymorphicModel):
         self.fire(User.objects.filter(pk=user_pk), **kwargs)
 
     def handle(self, user_pk, **context):
-        user = self.trigger.filter_user_queryset(User.objects.filter(pk=user_pk)).first()
+        user_queryset = self.trigger.filter_user_queryset(User.objects.filter(pk=user_pk))
+        user = user_queryset.first()
         if user:
             user_context = self.get_user_context(user, context)
             self.trigger.on_event(user, user_context)
@@ -201,3 +181,48 @@ class Condition(PolymorphicModel):
         if self.exclude_users_q:
             user_queryset = user_queryset.exclude(self.exclude_users_q)
         return user_queryset
+
+
+class ActionCountCondition(Condition):  # type: ignore[django-manager-missing]
+    limit = models.PositiveIntegerField(
+        _('action count limit'),
+        default=1,
+        help_text=_('Maximal number of actions that can be triggered for the user.'),
+        validators=[MinValueValidator(1)],
+    )
+
+    class Meta:
+        verbose_name = _('action count')
+        verbose_name_plural = _('action count')
+
+    def __str__(self):
+        return f'{super().__str__()} less than {self.limit}'
+
+    @property
+    def exclude_users_q(self) -> Optional[models.Q]:
+        return models.Q(
+            trigger_activity__trigger=self.trigger,
+            trigger_activity__action_count__gte=self.limit,
+        )
+
+
+class ActionFrequencyCondition(Condition):  # type: ignore[django-manager-missing]
+    limit = models.DurationField(
+        _('action frequency limit'),
+        default=timezone.timedelta(days=30),
+        help_text=_('Minimal period of time that should run out before the next action can be triggered.'),
+    )
+
+    class Meta:
+        verbose_name = _('action frequency')
+        verbose_name_plural = _('action frequency')
+
+    def __str__(self):
+        return f'{super().__str__()} less than {self.limit}'
+
+    @property
+    def exclude_users_q(self) -> Optional[models.Q]:
+        return models.Q(
+            trigger_activity__trigger=self.trigger,
+            trigger_activity__last_action_datetime__gt=timezone.now() - self.limit,
+        )
