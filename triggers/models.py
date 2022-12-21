@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import datetime
 from typing import Any, Generator, Mapping, Optional, Type
 
 from django.conf import settings
@@ -113,6 +114,12 @@ class Event(PolymorphicModel):
         on_delete=models.CASCADE,
         related_name='events',
         related_query_name='event',
+    )
+    delay = models.DurationField(
+        _('delay'),
+        default=datetime.timedelta(),
+        blank=True,
+        help_text=_('Delay from the moment when the event actually happened until it should be handled.'),
     )
     fired = Signal()
 
