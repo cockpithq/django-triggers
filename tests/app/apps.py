@@ -7,5 +7,5 @@ class BillingConfig(AppConfig):
     verbose_name = _('Test app')
 
     def ready(self):
-        from .celery import app
-        app.autodiscover_tasks(force=True)
+        # Initialize Celery app
+        from tests.app import celery  # noqa: F401
