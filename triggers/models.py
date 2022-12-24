@@ -203,7 +203,7 @@ class ActionCountCondition(Condition):  # type: ignore[django-manager-missing]
         verbose_name_plural = _('action count')
 
     def __str__(self):
-        return f'{super().__str__()} less than {self.limit}'
+        return f'{super().__str__()} no more than {self.limit}'
 
     @property
     def exclude_users_q(self) -> Optional[models.Q]:
@@ -225,7 +225,7 @@ class ActionFrequencyCondition(Condition):  # type: ignore[django-manager-missin
         verbose_name_plural = _('action frequency')
 
     def __str__(self):
-        return f'{super().__str__()} less than {self.limit}'
+        return f'{super().__str__()} no less than {self.limit}'
 
     @property
     def exclude_users_q(self) -> Optional[models.Q]:
