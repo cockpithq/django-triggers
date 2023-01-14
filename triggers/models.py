@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import datetime
-from typing import Any, Generator, Mapping, Optional, Type
+from typing import Any, Dict, Generator, Mapping, Optional, Type
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -133,7 +133,7 @@ class Event(PolymorphicModel):
     def should_be_fired(self, **kwargs) -> bool:
         return True
 
-    def get_user_context(self, user, context) -> Mapping[str, Any]:
+    def get_user_context(self, user, context: Mapping[str, Any]) -> Dict[str, Any]:
         user_context = {'user': user}
         user_context.update(context)
         return user_context
