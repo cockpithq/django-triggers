@@ -1,4 +1,4 @@
-from typing import Iterable, List, Type
+from typing import Iterable, List, Tuple, Type
 
 from django.contrib import admin
 from django.utils.html import format_html_join
@@ -47,14 +47,19 @@ class EventInline(StackedPolymorphicInline):
     child_inlines = generate_child_inlines(Event)
 
 
-class _OverrideTitle:
+class RelatedOnlyFieldListFilter(admin.RelatedOnlyFieldListFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title = self.__class__.__dict__['title']
 
+    def field_choices(self, field, request, model_admin) -> List[Tuple[str, str]]:
+        choices = super().field_choices(field, request, model_admin)
+        choices.sort(key=lambda choice: choice[1])
+        return choices
+
 
 def create_related_filter(title):
-    return type('_RelatedFilter', (_OverrideTitle, admin.RelatedOnlyFieldListFilter), {'title': title})
+    return type('_RelatedFilter', (RelatedOnlyFieldListFilter,), {'title': title})
 
 
 @admin.register(Trigger)
