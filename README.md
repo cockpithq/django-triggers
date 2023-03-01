@@ -2,12 +2,12 @@
 
 `django-triggers` is intended for implementing event-based business logic configurable through the Django admin site.
 
-## Quickstart
+## Install
 
-1. Install dj triggers and add to your INSTALLED_APPS
 ```shell
 pip install dj-triggers
 ```
+
 ```python
 INSTALLED_APPS = [
     ...
@@ -17,7 +17,14 @@ INSTALLED_APPS = [
 ]
 ```
 
-2. Add triggers' models into your app's model.py
+
+### Prerequisites 
+
+Celery is required to be setup in your project.
+
+## Quickstart
+
+1. Add triggers' models into your app's model.py
 
 ```python
 class SampleEvent(Event):
@@ -27,17 +34,17 @@ class SampleAction(Action):
     pass
 ```
 
-3. Makemigrations and migrate
+2. Makemigrations and migrate
 ```shell
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-4. Manage triggers through admin panel
+3. Manage triggers through admin panel
 
 ![Feb-28-2023 16-00-54](https://user-images.githubusercontent.com/101798/221892529-90966e29-aff5-4207-83b9-34e1ed1f869d.gif)
 
-5. Fire trigger's events
+4. Fire trigger's events
 For example, we may have a simple event that fires when some todos is completed and updated.
 ```python
 class Todo(models.Model):
@@ -49,7 +56,7 @@ class Todo(models.Model):
         ...
 ```
 
-6. Check the result
+5. Check the result
 Recorded triggers' activities are accessible in your django admin panel
 <img width="817" alt="image" src="https://user-images.githubusercontent.com/101798/221951142-61e4f928-f4ba-4c0b-a0f6-884f622fd3ae.png">
 
