@@ -98,6 +98,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
 class ActivityActionAdmin(admin.ModelAdmin):
     list_display = 'trigger', 'user', 'last_action_datetime', 'action_count',
     list_filter = 'trigger',
+    list_select_related = 'trigger', 'user',
     readonly_fields = list_display
     search_fields = tuple({f'=user__{User.get_email_field_name()}', f'=user__{User.USERNAME_FIELD}'})
 
