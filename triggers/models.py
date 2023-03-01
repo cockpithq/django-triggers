@@ -69,6 +69,9 @@ class Activity(PolymorphicModel):
         verbose_name_plural = _('activities')
         unique_together = (('trigger', 'user'),)
 
+    def __str__(self) -> str:
+        return f'{self.trigger} - {self.user}'
+
     class Cancel(Exception):
         pass
 
