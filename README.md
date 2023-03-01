@@ -24,14 +24,25 @@ Celery is required to be setup in your project.
 
 ## Quickstart
 
+Let's say we have a simple todo app with a model `Todo` and we want to email a user when all todos are completed.
+The full example is available in [Todo Example](https://github.com/fireharp/django-triggers-example).
+
 1. Add triggers' models into your app's model.py
 
 ```python
-class SampleEvent(Event):
+class TodoIsCompletedEvent(Event):
+    # will be fired when todo is completed
     pass
 
-class SampleAction(Action):
+class SendEmailAction(Action):
+    email_message = models.TextField(_('email message'), blank=True)
+    # will send email to user with email_message
+
+
+class TodoIsImportantCondition(Condition):
+    # will be checked before firing event
     pass
+
 ```
 
 2. Makemigrations and migrate
@@ -40,25 +51,34 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-3. Manage triggers through admin panel
+3. Add trigger in django admin panel
+Don't forget to Enable it.
 
-![Feb-28-2023 16-00-54](https://user-images.githubusercontent.com/101798/221892529-90966e29-aff5-4207-83b9-34e1ed1f869d.gif)
+<img width="483" alt="image" src="https://user-images.githubusercontent.com/101798/222222820-debceff7-1122-4011-bb2f-d1a549710bc1.png">
 
 4. Fire trigger's events
-For example, we may have a simple event that fires when some todos is completed and updated.
+
 ```python
 class Todo(models.Model):
     def save(self, *args, **kwargs):
         ...
-        if is_completed:
-            for event in TodoIsCompletedEvent.objects.all():
+        if is_finished:
+            for event in TodoIsFinishedEvent.objects.all():
                 event.fire_single(self.user_id)
         ...
 ```
 
-5. Check the result
+5. Action's performed when all Todo's are completed
+```
+DEBUG made it! fireharp {'user': <User: fireharp>} Great job finishing all the Todos.
+Keep it up!
+INFO Task triggers.tasks.handle_event[87b191f8-581d-4073-b272-0833b5bc821e] succeeded in 2.2159159209999997s: None
+```
+<img width="979" alt="image" src="https://user-images.githubusercontent.com/101798/222230003-744f3d36-d1dd-40cd-a0ff-eedb7a01d75a.png">
+
+6. Check the result in django admin panel
 Recorded triggers' activities are accessible in your django admin panel
-<img width="817" alt="image" src="https://user-images.githubusercontent.com/101798/221951142-61e4f928-f4ba-4c0b-a0f6-884f622fd3ae.png">
+<img width="643" alt="image" src="https://user-images.githubusercontent.com/101798/222230395-c49e5147-e8b6-416c-b4a5-70fbaf06eaa9.png">
 
 ## Development
 
