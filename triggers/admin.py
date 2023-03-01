@@ -79,14 +79,18 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
 
     @admin.display(description=_('events'))
     def get_events(self, obj: Trigger) -> str:
-        return format_html_join('\n', '<li>{0}</li>', ((str(event).capitalize(),) for event in obj.events.all()))
+        return format_html_join(
+            '\n',
+            '<li>{0}</li>',
+            sorted((str(event).capitalize(),) for event in obj.events.all()),
+        )
 
     @admin.display(description=_('conditions'))
     def get_conditions(self, obj: Trigger):
         return format_html_join(
             '\n',
             '<li>{0}</li>',
-            ((str(condition).capitalize(),) for condition in obj.conditions.all()),
+            sorted((str(condition).capitalize(),) for condition in obj.conditions.all()),
         )
 
     @admin.display(description=_('action'))
