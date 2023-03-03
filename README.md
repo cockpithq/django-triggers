@@ -30,7 +30,7 @@ The full example is available in [Todo Example](https://github.com/fireharp/djan
 1. Add triggers' models into your app's model.py
 
 ```python
-class TodoIsCompletedEvent(Event):
+class TodoIsFinishedEvent(Event):
     # will be fired when todo is completed
     pass
 
@@ -39,10 +39,12 @@ class SendEmailAction(Action):
     # will send email to user with email_message
 
 
-class TodoIsImportantCondition(Condition):
-    # will be checked before firing event
-    pass
-
+class UnfinishedTodosCountCondition(Condition):
+    value = models.PositiveIntegerField('value')
+    
+    def is_satisfied(self, user) -> bool:
+        unfinished_todos_count = user.todos.filter(date_finished__isnull=True).count()
+        return unfinished_todos_count == self.value
 ```
 
 2. Makemigrations and migrate
