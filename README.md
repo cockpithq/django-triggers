@@ -36,7 +36,10 @@ class TodoIsFinishedEvent(Event):
 
 class SendEmailAction(Action):
     email_message = models.TextField(_('email message'), blank=True)
-    # will send email to user with email_message
+    
+    def perform(self, user, context):
+        # will send email to user with email_message
+        logger.debug(f"made it! {user} {context} {self.email_message[:50]}")
 
 
 class UnfinishedTodosCountCondition(Condition):
