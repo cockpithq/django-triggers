@@ -106,7 +106,7 @@ class Action(PolymorphicModel):
     def __str__(self) -> str:
         return get_model_name(self.__class__)
 
-    def perform(self, user, context: Mapping[str, Any]):
+    def perform(self, user, context: Dict[str, Any]):
         raise NotImplementedError()
 
 
