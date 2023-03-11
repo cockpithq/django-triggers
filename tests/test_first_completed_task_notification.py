@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
@@ -24,6 +24,7 @@ def is_trigger_enabled(request) -> bool:
 def trigger(is_trigger_enabled: bool) -> Trigger:
     trigger = baker.make(Trigger, is_enabled=is_trigger_enabled, name='First Completed Task Notification')
     baker.make(TaskCompletedEvent, trigger=trigger)
+    # In order to notify the user once only, limit the number of performing with `ActionCountCondition`
     baker.make(ActionCountCondition, trigger=trigger, limit=1)
     baker.make(
         SendEmailAction,
@@ -59,7 +60,13 @@ def _get_action_count(user: User) -> int:
 
 
 @pytest.mark.django_db
-def test_notification(is_trigger_enabled: bool, is_notification_already_sent, task: Task, mailoutbox, user: User):
+def test_notification(
+    is_trigger_enabled: bool,
+    is_notification_already_sent: bool,
+    task: Task,
+    mailoutbox: List[EmailMessage],
+    user: User,
+):
     initial_action_count = _get_action_count(user)
     task.complete()
     run_on_commit()
