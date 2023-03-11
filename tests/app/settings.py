@@ -129,3 +129,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 CELERY_TASK_ALWAYS_EAGER = True
+CELERY_BEAT_SCHEDULE = {
+    'clock': {
+         'task': 'tests.app.tasks.clock',
+         'schedule': 3600.0,
+    },
+}

@@ -1,13 +1,14 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
+from django.db.models import Q
 from django.dispatch import receiver
 from django.dispatch.dispatcher import Signal
 from django.template import Context, Template
 from django.utils.translation import gettext_lazy as _
 
-from triggers.models import Action, Event
+from triggers.models import Action, Condition, Event
 
 
 class Task(models.Model):
@@ -46,6 +47,16 @@ def on_task_completed(sender, task: Task, **kwargs):
     event: TaskCompletedEvent
     for event in TaskCompletedEvent.objects.all():
         transaction.on_commit(lambda: event.fire_single(task.user_id))
+
+
+class ClockEvent(Event):  # type: ignore[django-manager-missing]
+    pass
+
+
+class HasUncompletedTaskCondition(Condition):  # type: ignore[django-manager-missing]
+    @property
+    def filter_users_q(self) -> Optional[Q]:
+        return Q(task__is_completed=False)
 
 
 class SendEmailAction(Action):  # type: ignore[django-manager-missing]
