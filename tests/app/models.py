@@ -76,7 +76,6 @@ class SendEmailAction(Action):  # type: ignore[django-manager-missing]
     message = models.TextField(_('message'), help_text=_('You can use the Django template language.'))
 
     def perform(self, user: User, context: Dict[str, Any]):
-        context['tasks'] = user.tasks.all()
         message_template = Template(self.message)
         rendered_message = message_template.render(Context(context))
         user.email_user(self.subject, rendered_message)
