@@ -30,7 +30,7 @@ class Task(models.Model):
 
     completed = Signal()
 
-    objects = TaskQuerySet.as_manager()
+    objects = TaskQuerySet.as_manager()  # type: ignore[django-manager-missing]
 
     class Meta:
         verbose_name = _('task')
