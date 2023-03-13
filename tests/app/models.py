@@ -49,6 +49,9 @@ class Task(models.Model):
 class TaskCompletedEvent(Event):  # type: ignore[django-manager-missing]
     important_only = models.BooleanField(_('important only'), default=False)
 
+    class Meta(Event.Meta):
+        verbose_name = _('task completed')
+
     def __str__(self):
         if self.important_only:
             return f'important {super().__str__()}'

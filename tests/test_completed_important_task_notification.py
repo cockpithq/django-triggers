@@ -73,8 +73,10 @@ def test_notification(
     is_task_important: bool,
     user: User,
     task: Task,
+    trigger: Trigger,
     mailoutbox: List[EmailMessage],
 ):
+    assert str(trigger.events.first()) == 'important task completed'
     initial_action_count = _get_action_count(user)
     task.complete()
     run_on_commit()
