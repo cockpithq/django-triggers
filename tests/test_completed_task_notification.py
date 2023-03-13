@@ -71,9 +71,9 @@ def test_notification(
     is_trigger_enabled: bool,
     is_notification_already_sent: bool,
     is_task_important: bool,
+    user: User,
     task: Task,
     mailoutbox: List[EmailMessage],
-    user: User,
 ):
     initial_action_count = _get_action_count(user)
     task.complete()
