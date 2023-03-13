@@ -56,7 +56,7 @@ def trigger(is_trigger_enabled: bool) -> Trigger:
         subject='You have uncompleted tasks!',
         message=(
             'Hey {{ user.first_name|capfirst }},\n'
-            'There are tasks you not completed yet: {{ user.tasks.filter_uncompleted }}'
+            'There are tasks you not completed yet: {{ user.tasks.filter_uncompleted }}.'
         ),
     )
     return trigger
