@@ -33,8 +33,8 @@ def user() -> User:
 @pytest.fixture(autouse=True)
 def trigger(is_trigger_enabled: bool) -> Trigger:
     trigger = baker.make(Trigger, is_enabled=is_trigger_enabled, name='Important Task Completed')
-    # Add a TaskCompletedEvent configured to be fired for important tasks only
-    baker.make(TaskCompletedEvent, trigger=trigger, is_important=True)
+    # Add a TaskCompletedEvent configured to be fired for an important tasks only
+    baker.make(TaskCompletedEvent, trigger=trigger, important_only=True)
     # In order to notify the user once only, limit the number of performing with `ActionCountCondition`
     baker.make(ActionCountCondition, trigger=trigger, limit=1)
     baker.make(

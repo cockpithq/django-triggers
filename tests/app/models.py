@@ -47,12 +47,17 @@ class Task(models.Model):
 
 
 class TaskCompletedEvent(Event):  # type: ignore[django-manager-missing]
-    is_important = models.BooleanField(_('important'), null=True)
+    important_only = models.BooleanField(_('important only'), default=False)
+
+    def __str__(self):
+        if self.important_only:
+            return f'important {super().__str__()}'
+        return super().__str__()
 
     def should_be_fired(self, **kwargs) -> bool:
-        if self.is_important is None:
-            return True
-        return Task.objects.filter(id=kwargs['task_id'], is_important=self.is_important).exists()
+        if self.important_only:
+            return Task.objects.filter(id=kwargs['task_id'], is_important=True).exists()
+        return True
 
     def get_user_context(self, user, context) -> Dict[str, Any]:
         user_context = super().get_user_context(user, context)
