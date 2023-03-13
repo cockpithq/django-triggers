@@ -8,7 +8,7 @@ from tests.app.models import Task
 class TaskAdmin(admin.ModelAdmin):
     actions = 'complete_tasks',
     autocomplete_fields = 'user',
-    list_display = 'name', 'user', 'is_completed'
+    list_display = 'name', 'user', 'is_important', 'is_completed'
     list_select_related = 'user',
     readonly_fields = 'is_completed',
 

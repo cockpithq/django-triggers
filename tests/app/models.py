@@ -21,6 +21,7 @@ class Task(models.Model):
     )
     name = models.CharField(_('name'), max_length=128)
     is_completed = models.BooleanField(_('completed'), default=False, db_index=True)
+    is_important = models.BooleanField(_('important'), default=False)
 
     completed = Signal()
 
@@ -39,14 +40,25 @@ class Task(models.Model):
 
 
 class TaskCompletedEvent(Event):  # type: ignore[django-manager-missing]
-    pass
+    is_important = models.BooleanField(_('important'), null=True)
+
+    def should_be_fired(self, **kwargs) -> bool:
+        if self.is_important is None:
+            return True
+        return Task.objects.filter(id=kwargs['task_id'], is_important=self.is_important).exists()
+
+    def get_user_context(self, user, context) -> Dict[str, Any]:
+        user_context = super().get_user_context(user, context)
+        task: Task = Task.objects.get(id=context['task_id'])
+        user_context.update({'task': task})
+        return user_context
 
 
 @receiver(Task.completed)
 def on_task_completed(sender, task: Task, **kwargs):
     event: TaskCompletedEvent
     for event in TaskCompletedEvent.objects.all():
-        transaction.on_commit(lambda: event.fire_single(task.user_id))
+        transaction.on_commit(lambda: event.fire_single(task.user_id, task_id=task.id))
 
 
 class ClockEvent(Event):  # type: ignore[django-manager-missing]
