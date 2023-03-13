@@ -11,6 +11,11 @@ from django.utils.translation import gettext_lazy as _
 from triggers.models import Action, Condition, Event
 
 
+class TaskQuerySet(models.QuerySet):
+    def filter_uncompleted(self, *args, **kwargs):
+        return self.filter(is_completed=False).filter(*args, **kwargs)
+
+
 class Task(models.Model):
     user = models.ForeignKey(
         to=User,
@@ -24,6 +29,8 @@ class Task(models.Model):
     is_important = models.BooleanField(_('important'), default=False)
 
     completed = Signal()
+
+    objects = TaskQuerySet.as_manager()
 
     class Meta:
         verbose_name = _('task')
