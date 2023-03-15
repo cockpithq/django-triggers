@@ -1,8 +1,7 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models import Q
 from django.dispatch import receiver
 from django.dispatch.dispatcher import Signal
 from django.template import Context, Template
@@ -81,9 +80,10 @@ class ClockEvent(Event):  # type: ignore[django-manager-missing]
 
 
 class HasUncompletedTaskCondition(Condition):  # type: ignore[django-manager-missing]
-    @property
-    def filter_users_q(self) -> Optional[Q]:
-        return Q(task__is_completed=False)
+    def filter_user_queryset(self, user_queryset) -> models.QuerySet:
+        return super().filter_user_queryset(user_queryset).filter(
+            task__is_completed=False
+        )
 
 
 class SendEmailAction(Action):  # type: ignore[django-manager-missing]
