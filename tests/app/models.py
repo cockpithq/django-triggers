@@ -82,7 +82,7 @@ class ClockEvent(Event):  # type: ignore[django-manager-missing]
 class HasUncompletedTaskCondition(Condition):  # type: ignore[django-manager-missing]
     def filter_user_queryset(self, user_queryset) -> models.QuerySet:
         return super().filter_user_queryset(user_queryset).filter(
-            task__is_completed=False
+            task__is_completed=False,
         )
 
 
