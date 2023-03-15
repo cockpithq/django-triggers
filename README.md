@@ -1,5 +1,7 @@
 # django-triggers
 
+`django-triggers` is intended for implementing event-based business logic configurable through the Django admin site.
+
 ## Development
 
 ### Run a django-admin command, e.g. `makemigrations`
