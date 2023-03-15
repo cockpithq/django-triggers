@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import datetime
-from typing import Any, Dict, Generator, Mapping, Optional, Type
+from typing import Any, Dict, Generator, Mapping, Type
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -36,6 +36,7 @@ class Trigger(PolymorphicModel):
     def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
         if not self.is_active:
             return user_queryset.none()
+        condition: Condition
         for condition in self.conditions.all():
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
@@ -174,22 +175,10 @@ class Condition(PolymorphicModel):
     def __str__(self) -> str:
         return get_model_name(self.__class__)
 
-    @property
-    def filter_users_q(self) -> Optional[models.Q]:
-        return None
-
-    @property
-    def exclude_users_q(self) -> Optional[models.Q]:
-        return None
-
     def is_satisfied(self, user) -> bool:
         return True
 
     def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
-        if self.filter_users_q:
-            user_queryset = user_queryset.filter(self.filter_users_q)
-        if self.exclude_users_q:
-            user_queryset = user_queryset.exclude(self.exclude_users_q)
         return user_queryset
 
 
@@ -208,9 +197,8 @@ class ActionCountCondition(Condition):  # type: ignore[django-manager-missing]
     def __str__(self):
         return f'{super().__str__()} no more than {self.limit}'
 
-    @property
-    def exclude_users_q(self) -> Optional[models.Q]:
-        return models.Q(
+    def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
+        return super().filter_user_queryset(user_queryset).exclude(
             trigger_activity__trigger=self.trigger,
             trigger_activity__action_count__gte=self.limit,
         )
@@ -230,9 +218,8 @@ class ActionFrequencyCondition(Condition):  # type: ignore[django-manager-missin
     def __str__(self):
         return f'{super().__str__()} no less than {self.limit}'
 
-    @property
-    def exclude_users_q(self) -> Optional[models.Q]:
-        return models.Q(
+    def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
+        return super().filter_user_queryset(user_queryset).exclude(
             trigger_activity__trigger=self.trigger,
             trigger_activity__last_action_datetime__gt=timezone.now() - self.limit,
         )
