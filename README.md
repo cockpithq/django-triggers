@@ -24,30 +24,33 @@ Celery is required to be setup in your project.
 
 ## Quickstart
 
-Let's say we have a simple todo app with a model `Todo` and we want to email a user when all todos are completed.
-The full example is available in [Todo Example](https://github.com/fireharp/django-triggers-example).
+Let's consider a simple tasks app with a model `Task` and we want to email a user when all tasks are completed.
 
-1. Add triggers' models into your app's model.py
+1. Add event, action and condition models into your app's model.py
+By doing this, we separate the development of the trigger components from their configuration within the Django admin panel. This ensures a more modular and manageable approach to building and configuring triggers.
 
+The full code example is available in [tests directory](https://github.com/cockpithq/django-triggers/tree/main/tests/app).
 ```python
-class TodoIsFinishedEvent(Event):
-    # will be fired when todo is completed
-    pass
+from triggers.models import Action, Condition, Event
+
+class TaskCompletedEvent(Event):
+    '''
+    Will be fired when all Task is completed.
+    
+    If `important_only` is True, only important tasks will fire this Event.
+    '''
+    important_only = models.BooleanField(default=False)
+
 
 class SendEmailAction(Action):
-    email_message = models.TextField(_('email message'), blank=True)
-    
-    def perform(self, user, context):
-        # will send email to user with email_message
-        logger.debug(f"made it! {user} {context} {self.email_message[:50]}")
+    '''
+    This action will make it possible to send an email to a user
+    '''
+    pass
 
 
-class UnfinishedTodosCountCondition(Condition):
-    value = models.PositiveIntegerField('value')
-    
-    def is_satisfied(self, user) -> bool:
-        unfinished_todos_count = user.todos.filter(date_finished__isnull=True).count()
-        return unfinished_todos_count == self.value
+class HasUncompletedTaskCondition(Condition):
+    pass
 ```
 
 2. Makemigrations and migrate
@@ -57,33 +60,24 @@ python manage.py migrate
 ```
 
 3. Add trigger in django admin panel
-Don't forget to Enable it.
+Don't forget to Enable it!
 
-<img width="483" alt="image" src="https://user-images.githubusercontent.com/101798/222222820-debceff7-1122-4011-bb2f-d1a549710bc1.png">
+<img width="557" alt="SCR-20230315-sooo" src="https://user-images.githubusercontent.com/101798/225434592-db566401-873a-4698-9292-79e51ddec5ee.png">
 
 4. Fire trigger's events
 
 ```python
-class Todo(models.Model):
-    def save(self, *args, **kwargs):
-        ...
-        if is_finished:
-            for event in TodoIsFinishedEvent.objects.all():
-                event.fire_single(self.user_id)
-        ...
+@receiver(Task.completed)
+def on_task_completed(sender, task: Task, **kwargs):
+    for event in TaskCompletedEvent.objects.all():
+        transaction.on_commit(
+            lambda: event.fire_single(task.user_id, task_id=task.id))
 ```
 
-5. Action's performed when all Todo's are completed
-```
-DEBUG made it! fireharp {'user': <User: fireharp>} Great job finishing all the Todos.
-Keep it up!
-INFO Task triggers.tasks.handle_event[87b191f8-581d-4073-b272-0833b5bc821e] succeeded in 2.2159159209999997s: None
-```
-<img width="979" alt="image" src="https://user-images.githubusercontent.com/101798/222230003-744f3d36-d1dd-40cd-a0ff-eedb7a01d75a.png">
+5. Check the results of triggers executed
 
-6. Check the result in django admin panel
 Recorded triggers' activities are accessible in your django admin panel
-<img width="643" alt="image" src="https://user-images.githubusercontent.com/101798/222230395-c49e5147-e8b6-416c-b4a5-70fbaf06eaa9.png">
+<img width="888" alt="SCR-20230315-spck" src="https://user-images.githubusercontent.com/101798/225434595-860d26bb-9c4b-481b-9813-a7467c9b7ed7.png">
 
 ## Development
 
