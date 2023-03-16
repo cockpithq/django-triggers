@@ -24,33 +24,66 @@ Celery is required to be setup in your project.
 
 ## Quickstart
 
-Let's consider a simple tasks app with a model `Task` and we want to email a user when all tasks are completed.
+Let's consider a simple tasks app with a model `Task` and we want to email a user when a task is completed.
 
-1. Add event, action and condition models into your app's model.py
+1. Add event, action and condition models into your app's models.py
+
 By doing this, we separate the development of the trigger components from their configuration within the Django admin panel. This ensures a more modular and manageable approach to building and configuring triggers.
 
 The full code example is available in [tests directory](https://github.com/cockpithq/django-triggers/tree/main/tests/app).
 ```python
-from triggers.models import Action, Condition, Event
+from django.dispatch import receiver, Signal
+from django.contrib.auth.models import User
+from django.db import models, transaction
 
+from triggers.models import Action,  Event
+
+
+# Our domain model
+class Task(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=128)
+    is_completed = models.BooleanField(default=False, db_index=True, editable=False)
+    is_important = models.BooleanField(default=False)
+
+    completed = Signal()
+
+    def complete(self):
+        if not self.is_completed:
+            self.is_completed = True
+            self.save()
+            transaction.on_commit(lambda: self.completed.send(sender=self.__class__, task=self))
+
+
+# At first, implement an Event which will trigger the notification.
 class TaskCompletedEvent(Event):
-    '''
-    Will be fired when all Task is completed.
-    
-    If `important_only` is True, only important tasks will fire this Event.
-    '''
-    important_only = models.BooleanField(default=False)
+    # By setting the following `important_only` field through the Django admin site 
+    # we can configure what tasks (all or important only) we want to notify the users about.
+    important_only = models.BooleanField(
+        default=False, 
+        help_text='Fire the event for important tasks only if checked.',
+    ) 
+
+    def should_be_fired(self, **kwargs) -> bool:
+        if self.important_only:
+            return Task.objects.filter(id=kwargs['task_id'], is_important=True).exists()
+        return True
 
 
+# Then we need to fire `TaskCompletedEvent` when a task is marked as completed.
+@receiver(Task.completed)
+def on_task_completed(sender, task: Task, **kwargs):
+    for event in TaskCompletedEvent.objects.all():
+        transaction.on_commit(lambda: event.fire_single(task.user_id, task_id=task.id))
+
+
+# At the end, create an Action implementing email notification.
 class SendEmailAction(Action):
-    '''
-    This action will make it possible to send an email to a user
-    '''
-    pass
+    subject = models.CharField(max_length=256)
+    message = models.TextField()
 
-
-class HasUncompletedTaskCondition(Condition):
-    pass
+    def perform(self, user: User, context: Dict[str, Any]):
+        user.email_user(self.subject, self.message)
 ```
 
 2. Makemigrations and migrate
@@ -59,25 +92,22 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-3. Add trigger in django admin panel
-Don't forget to Enable it!
+3. Add trigger in the Django admin site
+
+Don't forget to enable it :)
 
 <img width="557" alt="SCR-20230315-sooo" src="https://user-images.githubusercontent.com/101798/225434592-db566401-873a-4698-9292-79e51ddec5ee.png">
 
-4. Fire trigger's events
+4. Use the trigger!
 
 ```python
-@receiver(Task.completed)
-def on_task_completed(sender, task: Task, **kwargs):
-    for event in TaskCompletedEvent.objects.all():
-        transaction.on_commit(
-            lambda: event.fire_single(task.user_id, task_id=task.id))
+task = Task.objects.get(id=...)  # Get your task
+task.complete()  # And mark it as completed
 ```
 
-5. Check the results of triggers executed
+You may also trigger it manually from the Django admin site if you're checking the test app example.
 
-Recorded triggers' activities are accessible in your django admin panel
-<img width="888" alt="SCR-20230315-spck" src="https://user-images.githubusercontent.com/101798/225434595-860d26bb-9c4b-481b-9813-a7467c9b7ed7.png">
+<img width="369" alt="image" src="https://user-images.githubusercontent.com/101798/225565474-8d594a19-03b7-4501-b995-d66f45acdf64.png">
 
 ## Development
 
