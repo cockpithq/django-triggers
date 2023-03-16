@@ -1,4 +1,4 @@
-# django-triggers
+# django-triggers [![Latest Version][latest-version-image]][latest-version-link]
 
 `django-triggers` is intended for implementing event-based business logic configurable through the Django admin site.
 
@@ -132,3 +132,6 @@ poetry run mypy triggers tests
 ```shell
 poetry run pytest
 ```
+
+[latest-version-image]: https://img.shields.io/pypi/v/dj-triggers.svg
+[latest-version-link]: https://pypi.org/project/dj-triggers/
