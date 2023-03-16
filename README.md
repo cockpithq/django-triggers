@@ -92,7 +92,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-3. Add trigger in the Django admin site
+3. Add trigger on the Django admin site
 
 Don't forget to enable it :)
 
