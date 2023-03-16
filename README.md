@@ -1,4 +1,6 @@
 # django-triggers [![Latest Version][latest-version-image]][latest-version-link]
+[![Test Status][test-status-image]][test-status-link]
+[![Python Support][python-support-image]][python-support-link]
 
 `django-triggers` is intended for implementing event-based business logic configurable through the Django admin site.
 
@@ -135,3 +137,7 @@ poetry run pytest
 
 [latest-version-image]: https://img.shields.io/pypi/v/dj-triggers.svg
 [latest-version-link]: https://pypi.org/project/dj-triggers/
+[test-status-image]: https://github.com/cockpithq/django-triggers/actions/workflows/test.yml/badge.svg
+[test-status-link]: https://github.com/cockpithq/django-triggers/actions/workflows/test.yml
+[python-support-image]: https://img.shields.io/pypi/pyversions/dj-triggers.svg
+[python-support-link]: https://pypi.org/project/dj-triggers/
