@@ -36,6 +36,11 @@ exclude = [
     "*/migrations/*.py"
 ]
 
+[tool.coverage.report]
+exclude_lines = [
+  "raise NotImplementedError"
+]
+
 [tool.django-stubs]
 django_settings_module = "tests.app.settings"
 
