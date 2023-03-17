@@ -79,9 +79,12 @@ def test_reminder(
     is_trigger_enabled: bool,
     is_reminder_already_sent: bool,
     uncompleted_tasks: List[Task],
-    mailoutbox: List[EmailMessage],
     user: User,
+    trigger: Trigger,
+    mailoutbox: List[EmailMessage],
 ):
+    action_frequency_condition = trigger.conditions.instance_of(ActionFrequencyCondition).first()
+    assert str(action_frequency_condition) == 'action frequency no less than 1 day, 0:00:00'
     clock()
     run_on_commit()
     if is_trigger_enabled and not is_reminder_already_sent and uncompleted_tasks:
