@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "dj-triggers"
-version = "1.0.0"
+version = "1.0.1"
 description = """
 A Triggers system for Django made for implementing event-based \
 business logic configurable through the Django admin site."""
@@ -24,7 +24,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3"
-django-polymorphic = "^3.0.0"
+django-polymorphic = "^3"
 celery = ">=4.4"
 
 [tool.poetry.group.dev.dependencies]
