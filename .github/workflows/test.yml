@@ -11,7 +11,7 @@ jobs:
       - name: Install poetry
         run: python3 -m pip install poetry -U
       - name: Set up Python ${{ matrix.python-version }}
-        run: poetry install --with dev
+        run: poetry env use ${{ matrix.python-version }}
       - name: Install dependencies
         run: poetry install --with dev
       - name: Run flake8
