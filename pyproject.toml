@@ -10,7 +10,7 @@ A Triggers system for Django made for implementing event-based \
 business logic configurable through the Django admin site."""
 license = "BSD-3-Clause"
 authors = [
-    "Dmitry Kolyagin <dmitrykolyagin@gmail.com>"
+    "Dmitry Kolyagin <dmitry.kolyagin@gmail.com>"
 ]
 readme = "README.md"
 packages = [{include = "triggers"}]
