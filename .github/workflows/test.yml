@@ -7,11 +7,15 @@ jobs:
       matrix:
         python-version: [ "3.7", "3.8", "3.9", "3.10", "3.11" ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install poetry
         run: python3 -m pip install poetry -U
       - name: Set up Python ${{ matrix.python-version }}
-        run: poetry env use ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Use the system Python version by Poetry
+        run: poetry env use system
       - name: Install dependencies
         run: poetry install --with dev
       - name: Run flake8
