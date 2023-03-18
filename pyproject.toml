@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "dj-triggers"
 version = "1.0.0"
 description = """
-A Triggers system for Django made for implementing event-based
+A Triggers system for Django made for implementing event-based \
 business logic configurable through the Django admin site."""
 license = "BSD-3-Clause"
 authors = [
