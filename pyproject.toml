@@ -12,7 +12,7 @@ packages = [{include = "triggers"}]
 repository = "https://github.com/cockpithq/django-triggers"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = ">=3.7,<4.0"
 Django = ">=3"
 django-polymorphic = "^3.0.0"
 celery = ">=4.4"
