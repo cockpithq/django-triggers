@@ -5,11 +5,21 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "dj-triggers"
 version = "1.0.0"
-description = ""
-authors = []
+description = """
+A Triggers system for Django made for implementing event-based
+business logic configurable through the Django admin site."""
+license = "BSD-3-Clause"
+authors = [
+    "Dmitry Kolyagin <dmitrykolyagin@gmail.com>"
+]
 readme = "README.md"
 packages = [{include = "triggers"}]
 repository = "https://github.com/cockpithq/django-triggers"
+keywords = ["django", "triggers"]
+classifiers = [
+    "Framework :: Django :: 3",
+    "Framework :: Django :: 4"
+]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
