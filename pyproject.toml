@@ -24,7 +24,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7,<4.0"
 Django = ">=3"
-django-polymorphic = "^3.0.0"
+django-polymorphic = "^3"
 celery = ">=4.4"
 
 [tool.poetry.group.dev.dependencies]
