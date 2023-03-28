@@ -88,7 +88,10 @@ class HasUncompletedTaskCondition(Condition):  # type: ignore[django-manager-mis
 
 class SendEmailAction(Action):  # type: ignore[django-manager-missing]
     subject = models.CharField(_('subject'), max_length=256)
-    message = models.TextField(_('message'), help_text=_('You can use the Django template language.'))
+    message = models.TextField(
+        verbose_name=_('message'),
+        help_text=_('You can use the Django template language.'),
+    )
 
     def perform(self, user: User, context: Dict[str, Any]):
         message_template = Template(self.message)

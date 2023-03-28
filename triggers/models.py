@@ -123,7 +123,10 @@ class Event(PolymorphicModel):
         _('delay'),
         default=datetime.timedelta(),
         blank=True,
-        help_text=_('Delay from the moment when the event actually happened until it should be handled.'),
+        help_text=_(
+            'Delay from the moment when the event '
+            'actually happened until it should be handled.'
+        ),
     )
     fired = Signal()
 
@@ -208,7 +211,10 @@ class ActionFrequencyCondition(Condition):  # type: ignore[django-manager-missin
     limit = models.DurationField(
         _('action frequency limit'),
         default=timezone.timedelta(days=30),
-        help_text=_('Minimal period of time that should run out before the next action can be triggered.'),
+        help_text=_(
+            'Minimal period of time that should run out '
+            'before the next action can be triggered.'
+        ),
     )
 
     class Meta:

@@ -6,7 +6,11 @@ from triggers.models import Event
 
 @receiver(Event.fired)
 def on_event_fired(sender, signal: Signal, event: Event, user_pk, **kwargs):
-    handle_event.apply_async(args=(event.pk, user_pk), kwargs=kwargs, countdown=event.delay.total_seconds())
+    handle_event.apply_async(
+        args=(event.pk, user_pk),
+        kwargs=kwargs,
+        countdown=event.delay.total_seconds(),
+    )
 
 
 @shared_task

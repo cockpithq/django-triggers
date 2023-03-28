@@ -69,7 +69,9 @@ def activity(trigger: Trigger, is_reminder_already_sent, user) -> Optional[Activ
             Activity,
             trigger=trigger,
             user=user,
-            last_action_datetime=datetime.datetime.now() - MIN_FREQUENCY + datetime.timedelta(seconds=30),
+            last_action_datetime=(
+                datetime.datetime.now() - MIN_FREQUENCY + datetime.timedelta(seconds=30)
+            ),
         )
     return None
 

@@ -27,8 +27,13 @@ def get_child_inline(cls: Type[PolymorphicModel]) -> Type[StackedPolymorphicInli
     return type(f'{cls.__name__}Inline', (StackedPolymorphicInline.Child,), class_dict)
 
 
-def generate_child_inlines(model: Type[PolymorphicModel]) -> Iterable[Type[StackedPolymorphicInline.Child]]:
-    sorted_child_models = sorted(get_child_models(model), key=lambda _model: get_model_name(_model).lower())
+def generate_child_inlines(
+    model: Type[PolymorphicModel]
+) -> Iterable[Type[StackedPolymorphicInline.Child]]:
+    sorted_child_models = sorted(
+        get_child_models(model),
+        key=lambda _model: get_model_name(_model).lower(),
+    )
     return [get_child_inline(child_model) for child_model in sorted_child_models]
 
 
@@ -75,7 +80,8 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
     polymorphic_list = True
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('events', 'conditions').select_related('action')
+        base_queryset = super().get_queryset(request)
+        return base_queryset.prefetch_related('events', 'conditions').select_related('action')
 
     @admin.display(description=_('events'))
     def get_events(self, obj: Trigger) -> str:
@@ -104,7 +110,10 @@ class ActivityActionAdmin(admin.ModelAdmin):
     list_filter = 'trigger',
     list_select_related = 'trigger', 'user',
     readonly_fields = list_display
-    search_fields = tuple({f'=user__{User.get_email_field_name()}', f'=user__{User.USERNAME_FIELD}'})
+    search_fields = tuple({
+        f'=user__{User.get_email_field_name()}',
+        f'=user__{User.USERNAME_FIELD}',
+    })
 
     def has_add_permission(self, request, obj=None):
         return False
