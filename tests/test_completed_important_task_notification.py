@@ -25,7 +25,7 @@ def is_task_important(request) -> bool:
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def user() -> User:
     return baker.make(User, first_name='Bob', email='bob@example.com')
 
@@ -57,7 +57,7 @@ def activity(trigger: Trigger, is_notification_already_sent, user) -> Optional[A
     return None
 
 
-@pytest.fixture
+@pytest.fixture()
 def task(user: User, is_task_important: bool) -> Task:
     return baker.make(Task, user=user, is_important=is_task_important)
 
@@ -66,7 +66,7 @@ def _get_action_count(user: User) -> int:
     return sum([activity.action_count for activity in user.trigger_activities.all()])
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_notification(
     is_trigger_enabled: bool,
     is_notification_already_sent: bool,

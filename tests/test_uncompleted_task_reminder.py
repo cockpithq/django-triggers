@@ -29,14 +29,14 @@ def has_uncompleted_task(request) -> bool:
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def user() -> User:
     user = baker.make(User, first_name='Bob', email='bob@example.com')
     baker.make(Task, user=user, is_completed=True)
     return user
 
 
-@pytest.fixture
+@pytest.fixture()
 def uncompleted_tasks(user, has_uncompleted_task) -> List[Task]:
     if has_uncompleted_task:
         return baker.make(Task, user=user, is_completed=False, _quantity=2)
@@ -74,7 +74,7 @@ def activity(trigger: Trigger, is_reminder_already_sent, user) -> Optional[Activ
     return None
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_reminder(
     is_trigger_enabled: bool,
     is_reminder_already_sent: bool,
