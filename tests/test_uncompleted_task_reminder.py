@@ -1,11 +1,11 @@
 import datetime
 from typing import List, Optional
-from typing_extensions import Final
 
 from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from model_bakery import baker
 import pytest
+from typing_extensions import Final
 
 from tests.app.models import ClockEvent, HasUncompletedTaskCondition, SendEmailAction, Task
 from tests.app.tasks import clock
