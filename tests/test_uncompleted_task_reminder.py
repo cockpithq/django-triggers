@@ -1,5 +1,6 @@
 import datetime
 from typing import List, Optional
+from typing_extensions import Final
 
 from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
@@ -11,7 +12,7 @@ from tests.app.tasks import clock
 from tests.utils import run_on_commit
 from triggers.models import ActionFrequencyCondition, Activity, Trigger
 
-MIN_FREQUENCY = datetime.timedelta(days=1)
+MIN_FREQUENCY: Final[datetime.timedelta] = datetime.timedelta(days=1)
 
 
 @pytest.fixture(params=[True, False])
