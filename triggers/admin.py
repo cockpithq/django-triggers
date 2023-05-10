@@ -70,7 +70,14 @@ def create_related_filter(title):
 @admin.register(Trigger)
 class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
     inlines = ActionInline, EventInline, ConditionInline,
-    list_display = 'id', 'name', 'get_events', 'get_conditions', 'get_action', 'is_enabled',
+    list_display = (
+        'id',
+        'name',
+        'display_events',
+        'display_conditions',
+        'display_action',
+        'is_enabled',
+    )
     list_filter = (
         'is_enabled',
         ('event__polymorphic_ctype', create_related_filter(_('event'))),
@@ -84,7 +91,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         return base_queryset.prefetch_related('events', 'conditions').select_related('action')
 
     @admin.display(description=_('events'))
-    def get_events(self, obj: Trigger) -> str:
+    def display_events(self, obj: Trigger) -> str:
         return format_html_join(
             '\n',
             '<li>{0}</li>',
@@ -92,7 +99,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         )
 
     @admin.display(description=_('conditions'))
-    def get_conditions(self, obj: Trigger):
+    def display_conditions(self, obj: Trigger):
         return format_html_join(
             '\n',
             '<li>{0}</li>',
@@ -100,7 +107,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         )
 
     @admin.display(description=_('action'))
-    def get_action(self, obj: Trigger):
+    def display_action(self, obj: Trigger):
         return str(obj.action.get_real_instance()).capitalize() if hasattr(obj, 'action') else None
 
 
