@@ -210,7 +210,7 @@ class ActionCountCondition(Condition):  # type: ignore[django-manager-missing]
 class ActionFrequencyCondition(Condition):  # type: ignore[django-manager-missing]
     limit = models.DurationField(
         _('action frequency limit'),
-        default=timezone.timedelta(days=30),
+        default=datetime.timedelta(days=30),
         help_text=_(
             'Minimal period of time that should run out '
             'before the next action can be triggered.'
