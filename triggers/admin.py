@@ -92,7 +92,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         base_queryset = super().get_queryset(request)
         return base_queryset.prefetch_related('events', 'conditions').select_related('action')
 
-    @admin.display(description=_('events'))
+    @admin.display(description=_('events'), ordering="event__polymorphic_ctype")
     def display_events(self, obj: Trigger) -> str:
         return format_html_join(
             '\n',
@@ -100,7 +100,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             sorted((str(event).capitalize(),) for event in obj.events.all()),
         )
 
-    @admin.display(description=_('conditions'))
+    @admin.display(description=_('conditions'), ordering="condition__polymorphic_ctype")
     def display_conditions(self, obj: Trigger):
         return format_html_join(
             '\n',
@@ -108,7 +108,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             sorted((str(condition).capitalize(),) for condition in obj.conditions.all()),
         )
 
-    @admin.display(description=_('action'))
+    @admin.display(description=_('action'), ordering="action__polymorphic_ctype")
     def display_action(self, obj: Trigger):
         return str(obj.action.get_real_instance()).capitalize() if hasattr(obj, 'action') else None
 
