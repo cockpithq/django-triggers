@@ -3,6 +3,7 @@ from typing import Iterable, List, Tuple, Type
 from django.contrib import admin
 from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
+from more_admin_filters import MultiSelectRelatedOnlyFilter
 from polymorphic.admin import PolymorphicInlineSupportMixin, StackedPolymorphicInline
 from polymorphic.models import PolymorphicModel
 
@@ -52,7 +53,7 @@ class EventInline(StackedPolymorphicInline):
     child_inlines = generate_child_inlines(Event)
 
 
-class RelatedOnlyFieldListFilter(admin.RelatedOnlyFieldListFilter):
+class RelatedOnlyFieldMultiListFilter(MultiSelectRelatedOnlyFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title = self.__class__.__dict__['title']
@@ -64,7 +65,8 @@ class RelatedOnlyFieldListFilter(admin.RelatedOnlyFieldListFilter):
 
 
 def create_related_filter(title):
-    return type('_RelatedFilter', (RelatedOnlyFieldListFilter,), {'title': title})
+    return type('_RelatedFilter', (RelatedOnlyFieldMultiListFilter,), {'title': title})
+
 
 
 @admin.register(Trigger)

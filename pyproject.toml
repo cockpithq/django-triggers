@@ -26,6 +26,7 @@ python = ">=3.7.2,<4.0"
 Django = ">=3"
 django-polymorphic = "^3"
 celery = ">=4.4"
+django-more-admin-filters = "^1.7"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^5.0.4"

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'more_admin_filters',
     'polymorphic',
     'triggers',
     'tests.app',
