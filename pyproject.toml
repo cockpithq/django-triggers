@@ -61,6 +61,7 @@ plugins = ["mypy_django_plugin.main"]
 
 [[tool.mypy.overrides]]
 module = [
+    "more_admin_filters",
     "polymorphic.admin",
     "polymorphic.models"
 ]
