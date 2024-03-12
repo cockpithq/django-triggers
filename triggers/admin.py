@@ -68,7 +68,6 @@ def create_related_filter(title):
     return type('_RelatedFilter', (RelatedOnlyFieldMultiListFilter,), {'title': title})
 
 
-
 @admin.register(Trigger)
 class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
     inlines = ActionInline, EventInline, ConditionInline,
