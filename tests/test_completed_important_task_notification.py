@@ -79,7 +79,7 @@ def test_notification(
 ):
     assert str(trigger) == 'Important Task Completed'
     assert str(trigger.events.first()) == 'important task completed'
-    assert str(trigger.action) == 'send email action'
+    assert str(trigger.actions.first()) == 'send email action'
     assert str(trigger.conditions.first()) == 'action count no more than 1'
     initial_action_count = _get_action_count(user)
     task.complete()

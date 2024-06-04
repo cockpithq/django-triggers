@@ -31,7 +31,7 @@ class Trigger(PolymorphicModel):
 
     @property
     def is_active(self) -> bool:
-        return self.is_enabled and hasattr(self, 'action')
+        return self.is_enabled and self.actions.exists()
 
     def filter_user_queryset(self, user_queryset: models.QuerySet) -> models.QuerySet:
         if not self.is_active:
@@ -44,7 +44,8 @@ class Trigger(PolymorphicModel):
     def on_event(self, user, context: Mapping[str, Any]):
         if user and all(condition.is_satisfied(user) for condition in self.conditions.all()):
             with Activity.lock(user, self):
-                self.action.perform(user, context)
+                for action in self.actions.all():
+                    action.perform(user, context)
 
 
 class Activity(PolymorphicModel):
@@ -93,10 +94,11 @@ class Activity(PolymorphicModel):
 
 
 class Action(PolymorphicModel):
-    trigger = models.OneToOneField(
+    trigger = models.ForeignKey(
         to=Trigger,
         on_delete=models.CASCADE,
-        related_name='action',
+        related_name='actions',
+        related_query_name='action',
         verbose_name=_('trigger'),
     )
 

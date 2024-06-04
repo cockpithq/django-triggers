@@ -16,7 +16,7 @@ TriggerComponent: TypeAlias = Union[Action, Condition, Event]
 
 
 expected_trigger_components: Mapping[str, List[Type[TriggerComponent]]] = {
-    'action': [
+    'actions': [
         SendEmailAction,
     ],
     'conditions': [

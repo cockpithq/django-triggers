@@ -76,7 +76,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         'name',
         'display_events',
         'display_conditions',
-        'display_action',
+        'display_actions',
         'is_enabled',
     )
     list_filter = (
@@ -89,7 +89,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
 
     def get_queryset(self, request):
         base_queryset = super().get_queryset(request)
-        return base_queryset.prefetch_related('events', 'conditions').select_related('action')
+        return base_queryset.prefetch_related('events', 'conditions', 'actions')
 
     @admin.display(description=_('events'), ordering="event__polymorphic_ctype")
     def display_events(self, obj: Trigger) -> str:
@@ -108,8 +108,12 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         )
 
     @admin.display(description=_('action'), ordering="action__polymorphic_ctype")
-    def display_action(self, obj: Trigger):
-        return str(obj.action.get_real_instance()).capitalize() if hasattr(obj, 'action') else None
+    def display_actions(self, obj: Trigger):
+        return format_html_join(
+            '\n',
+            '<li>{0}</li>',
+            sorted((str(action).capitalize(),) for action in obj.actions.all()),
+        )
 
 
 @admin.register(Activity)
