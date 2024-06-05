@@ -46,6 +46,7 @@ class ConditionInline(StackedPolymorphicInline):
 class ActionInline(StackedPolymorphicInline):
     model = Action
     child_inlines = generate_child_inlines(Action)
+    fk_name = "trigger"
 
 
 class EventInline(StackedPolymorphicInline):
