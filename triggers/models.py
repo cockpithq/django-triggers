@@ -102,15 +102,6 @@ class Action(PolymorphicModel):
         verbose_name=_('trigger'),
         null=True
     )
-    trigger_old = models.ForeignKey(
-        to=Trigger,
-        on_delete=models.CASCADE,
-        related_name='actions_old',
-        related_query_name='action_old',
-        verbose_name=_('trigger obsolete'),
-        null=True,
-        blank=True,
-    )
 
     class Meta:
         verbose_name = _('action')
