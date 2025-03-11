@@ -22,7 +22,24 @@ def get_child_models(cls: Type[PolymorphicModel]) -> Iterable[Type[PolymorphicMo
 
 
 def get_child_inline(cls: Type[PolymorphicModel]) -> Type[StackedPolymorphicInline.Child]:
-    class_dict = {'model': cls, 'extra': 0}
+    class_dict = {
+        'model': cls,
+        'extra': 0,
+    }
+
+    if cls.__doc__ and not cls.__doc__.startswith(cls.__name__):
+        class_dict['readonly_fields'] = ('__doc__',)
+
+        def get_doc(self, obj):
+            print('get docs')
+            if obj and obj.__doc__ and not obj.__doc__.startswith(obj.__class__.__name__):
+                return obj.__doc__
+            return ''
+
+        get_doc.short_description = 'Documentation'
+
+        class_dict['__doc__'] = get_doc
+
     if hasattr(cls, 'admin_initkwargs'):
         class_dict.update(cls.admin_initkwargs())
     return type(f'{cls.__name__}Inline', (StackedPolymorphicInline.Child,), class_dict)
