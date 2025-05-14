@@ -77,30 +77,34 @@ def create_sample_trigger():
     except Trigger.DoesNotExist:
         pass
 
-    # Create trigger components
-    event = MedicalFormSubmittedEvent.objects.create(name="Medical Form Submission")
-
-    condition = HighBMICondition.objects.create(name="BMI > 45", threshold=45.0)
-
-    action = ScheduleDoctorAppointmentAction.objects.create(
-        name="Schedule Appointment with Dr. Smith",
-        doctor_name="Dr. Jennifer Smith",
-        days_ahead=5,
-        appointment_reason_template="Follow-up for high BMI ({{ bmi }})",
-    )
-
-    # Create trigger
+    # Create trigger first
     trigger = Trigger.objects.create(
         name=trigger_name,
         is_enabled=True,
     )
-
-    # Add components to trigger
-    trigger.events.add(event)
-    trigger.conditions.add(condition)
-    trigger.actions.add(action)
-
     logger.info(f"Created new trigger: {trigger.name}")
+
+    # Create trigger components with trigger reference
+    event = MedicalFormSubmittedEvent.objects.create(trigger=trigger)
+    logger.info("Created medical form submitted event")
+
+    condition = HighBMICondition.objects.create(
+        trigger=trigger,
+        threshold=45.0,
+    )
+    logger.info("Created high BMI condition with threshold 45.0")
+
+    action = ScheduleDoctorAppointmentAction.objects.create(
+        trigger=trigger,
+        doctor_name="Dr. Jennifer Smith",
+        days_ahead=5,
+        appointment_reason_template="Follow-up for high BMI ({{ bmi }})",
+    )
+    logger.info("Created appointment scheduling action")
+
+    # Add event to trigger
+    trigger.events.add(event)
+
     return trigger
 
 

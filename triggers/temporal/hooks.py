@@ -10,6 +10,8 @@ from typing import Any
 from asgiref.sync import async_to_sync
 from django.dispatch import receiver, Signal
 from django.utils.module_loading import import_string
+from datetime import timedelta
+from temporalio.common import RetryPolicy
 
 from triggers.models import Event
 from triggers import settings as triggers_settings
@@ -58,18 +60,20 @@ def start_trigger_workflow(event: Event, user_pk: Any, **kwargs):
                 user_pk,
             )
 
+            # Create proper RetryPolicy object
+            retry_policy = RetryPolicy(
+                initial_interval=timedelta(seconds=1),
+                maximum_interval=timedelta(seconds=10),
+                maximum_attempts=5,
+            )
+
             # Start the workflow with the appropriate arguments
             await client.start_workflow(
                 "trigger_workflow",  # Must match the name in @workflow.defn
                 args=[event.trigger_id, user_pk, kwargs],
                 id=workflow_id,
                 task_queue=triggers_settings.TEMPORAL_TASK_QUEUE,
-                # Retry policy for workflow start
-                retry_policy={
-                    "initial_interval": "1s",
-                    "maximum_interval": "10s",
-                    "maximum_attempts": 5,
-                },
+                retry_policy=retry_policy,  # Use the proper RetryPolicy object
             )
 
             logger.debug(

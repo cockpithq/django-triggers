@@ -18,11 +18,15 @@ import logging
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changed to DEBUG for more verbose output
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+# Enable debug logging for the triggers module
+logging.getLogger("triggers").setLevel(logging.DEBUG)
+logging.getLogger("triggers.temporal").setLevel(logging.DEBUG)
 
 # Set up Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
@@ -32,69 +36,73 @@ django.setup()
 
 from django.contrib.auth.models import User
 from asgiref.sync import sync_to_async
-from triggers.models import Trigger, Event
-
-
-class BMIData:
-    """Simple class to hold BMI data for our test."""
-
-    def __init__(self, height_cm, weight_kg, user_id):
-        self.height_cm = height_cm
-        self.weight_kg = weight_kg
-        self.user_id = user_id
-        # Calculate BMI
-        self.bmi = round(weight_kg / ((height_cm / 100) ** 2), 1)
+from triggers.models import Trigger
+from examples.models import MedicalForm, MedicalFormSubmittedEvent
 
 
 async def setup_test():
     """Set up the test data (user and trigger)."""
     # Get or create a test user
     try:
-        user = await sync_to_async(User.objects.get)(username="testuser")
+        user = await sync_to_async(User.objects.get)(username="patient")
         logger.info(f"Using existing user: {user.username}")
     except User.DoesNotExist:
         user = await sync_to_async(User.objects.create_user)(
-            username="testuser", email="test@example.com", password="password"
+            username="patient",
+            email="patient@example.com",
+            password="password",
+            first_name="Test",
+            last_name="Patient",
         )
         logger.info(f"Created new user: {user.username}")
 
-    # Get all events in the database
-    events = await sync_to_async(list)(Event.objects.all())
-    if not events:
-        logger.error(
-            "No events found in the database. Please create at least one in the admin interface."
-        )
+    # Get the event in the database
+    try:
+        event = await sync_to_async(MedicalFormSubmittedEvent.objects.first)()
+        if not event:
+            logger.error("No MedicalFormSubmittedEvent found in the database")
+            return None, None
+        logger.info(f"Using event: {event}")
+    except Exception as e:
+        logger.error(f"Error getting event: {e}")
         return None, None
 
-    # Use the first event available
-    event = events[0]
-    logger.info(f"Using event: {event}")
+    # Debug: Print event details
+    logger.debug(f"Event ID: {event.pk}, Event type: {event.__class__.__name__}")
 
-    # Get all triggers in the database
-    triggers = await sync_to_async(list)(Trigger.objects.all())
-    if not triggers:
+    # Check if event has a trigger
+    trigger_id = await sync_to_async(getattr)(event, "trigger_id", None)
+    logger.debug(f"Event's trigger_id: {trigger_id}")
+
+    # Get the trigger from the database
+    try:
+        trigger = await sync_to_async(Trigger.objects.get)(
+            name="High BMI Doctor Referral"
+        )
+        logger.info(f"Using trigger: {trigger.name}")
+    except Trigger.DoesNotExist:
         logger.error(
-            "No triggers found in the database. Please create at least one in the admin interface."
+            "High BMI Doctor Referral trigger not found. Run setup_db.py first."
         )
         return user, None
 
-    # Use the first trigger available
-    trigger = triggers[0]
-    logger.info(f"Using trigger: {trigger.name}")
+    # Debug: Print trigger details
+    logger.debug(f"Trigger ID: {trigger.pk}, Enabled: {trigger.is_enabled}")
+
+    # Debug: List conditions and actions
+    conditions = await sync_to_async(list)(trigger.conditions.all())
+    actions = await sync_to_async(list)(trigger.actions.all())
+    logger.debug(f"Trigger has {len(conditions)} conditions and {len(actions)} actions")
+    for i, condition in enumerate(conditions):
+        logger.debug(f"Condition {i+1}: {condition}")
+    for i, action in enumerate(actions):
+        logger.debug(f"Action {i+1}: {action}")
 
     # Check if the trigger is enabled
     if not trigger.is_enabled:
         logger.warning(f"Trigger '{trigger.name}' is not enabled - enabling it")
         trigger.is_enabled = True
         await sync_to_async(trigger.save)()
-
-    # Make sure the event is associated with the trigger
-    trigger_events = await sync_to_async(list)(trigger.events.all())
-    if event not in trigger_events:
-        logger.warning(
-            f"Event '{event}' not associated with trigger '{trigger.name}' - adding it"
-        )
-        await sync_to_async(trigger.events.add)(event)
 
     return user, event
 
@@ -107,25 +115,59 @@ async def simulate_form_submission():
         logger.error("Setup failed - missing event or trigger")
         return 1
 
-    # Create a BMI data object - using numbers that will result in a high BMI
+    # Create medical form with high BMI
     height = 180  # cm
     weight = 150  # kg
-    bmi_data = BMIData(height, weight, user.id)
 
-    logger.info(f"Simulating form submission for {user.username}")
-    logger.info(f"Height: {height}cm, Weight: {weight}kg, BMI: {bmi_data.bmi}")
+    logger.info(f"Simulating medical form submission for {user.username}")
+    logger.info(f"Height: {height}cm, Weight: {weight}kg")
 
-    # Fire the event (as if a form was submitted)
-    # We're passing the BMI data as context for the workflow
-    await sync_to_async(event.fire_single)(
-        user.id,
-        bmi=bmi_data.bmi,
-        height=bmi_data.height_cm,
-        weight=bmi_data.weight_kg,
-        task_id=1,  # This is needed by the TaskCompletedEvent
+    # Debug: Check triggers_settings
+    from triggers import settings as triggers_settings
+
+    logger.debug(f"TRIGGERS_USE_TEMPORAL: {triggers_settings.TRIGGERS_USE_TEMPORAL}")
+    logger.debug(f"TEMPORAL_TASK_QUEUE: {triggers_settings.TEMPORAL_TASK_QUEUE}")
+
+    # Debug: Directly examining Event signal and handler
+    logger.debug(f"Signal defined on Event: {getattr(event.__class__, 'fired', None)}")
+
+    from triggers.temporal.hooks import on_event_fired
+
+    logger.debug(f"Event signal handler: {on_event_fired}")
+
+    # Create the form - this should trigger the MedicalForm.submitted signal
+    form = await sync_to_async(MedicalForm.objects.create)(
+        user=user,
+        height_cm=height,
+        weight_kg=weight,
+        has_diabetes=False,
+        has_hypertension=False,
+        current_medications="None",
     )
 
-    logger.info("Event fired successfully")
+    # Calculate BMI for display
+    bmi = await sync_to_async(getattr)(form, "bmi")
+    logger.info(f"Form created with BMI: {bmi}")
+
+    # Manually fire the event with explicit debug
+    logger.info("Manually firing the event...")
+
+    # Calculate expected workflow ID
+    workflow_id = f"trigger-{event.trigger_id}-{user.id}-{event.pk}"
+    logger.debug(f"Expected workflow ID: {workflow_id}")
+
+    # First get the receiver functions for the Event.fired signal
+    signal = event.__class__.fired
+    logger.debug(f"Signal receivers: {list(signal.receivers)}")
+
+    await sync_to_async(event.fire_single)(
+        user.id,
+        bmi=bmi,
+        height=height,
+        weight=weight,
+    )
+
+    logger.info("Form submitted and event fired successfully")
     logger.info("Check your Temporal worker logs for workflow execution")
 
     return 0
@@ -134,7 +176,7 @@ async def simulate_form_submission():
 async def main():
     """Main entry point for the script."""
     try:
-        logger.info("Starting BMI form submission test")
+        logger.info("Starting medical form submission test")
         return await simulate_form_submission()
     except Exception as e:
         logger.exception(f"Error during test: {str(e)}")
