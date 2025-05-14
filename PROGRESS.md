@@ -103,3 +103,25 @@ MEMO:
 - The workflow ID format is "trigger-{trigger_id}-{user_id}-{event_id}" for deduplication
 - For idempotency, rerunning the same event with the same user will detect duplicate execution
 - Multiple doctor appointments were successfully created based on the BMI threshold rule
+
+### TS: 2025-05-15 00:39:11 CEST
+
+---
+
+## PROBLEM: Improve workflow execution logging and readability
+
+WHAT WAS DONE:
+
+- Enhanced logging in Temporal workflows to show steps and progress
+- Added emojis and descriptive messages to create a narrative of the workflow execution
+- Improved worker and activity logging to tell a coherent story
+- Updated the test script to summarize results of workflow execution
+
+---
+
+MEMO:
+
+- Narrative-focused logging helps understand the sequence of events in complex workflows
+- Added structured logging with logger names to distinguish between components
+- Workflow logging shows the complete process: trigger lookup → condition evaluation → action execution
+- Enhanced logging is essential for complex workflows that span multiple components

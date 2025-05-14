@@ -18,15 +18,20 @@ import logging
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more verbose output
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    level=logging.INFO,  # Base level for all loggers
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",  # Added module name to format
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger(__name__)
 
-# Enable debug logging for the triggers module
-logging.getLogger("triggers").setLevel(logging.DEBUG)
-logging.getLogger("triggers.temporal").setLevel(logging.DEBUG)
+# Enable detailed logging for all related modules
+logging.getLogger("triggers").setLevel(logging.INFO)
+logging.getLogger("triggers.temporal").setLevel(logging.INFO)
+logging.getLogger("examples").setLevel(logging.INFO)
+logging.getLogger("temporalio").setLevel(
+    logging.WARNING
+)  # Keep Temporal SDK logs at warning level
+
+logger = logging.getLogger(__name__)
 
 # Set up Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
@@ -92,11 +97,11 @@ async def setup_test():
     # Debug: List conditions and actions
     conditions = await sync_to_async(list)(trigger.conditions.all())
     actions = await sync_to_async(list)(trigger.actions.all())
-    logger.debug(f"Trigger has {len(conditions)} conditions and {len(actions)} actions")
+    logger.info(f"Trigger has {len(conditions)} conditions and {len(actions)} actions")
     for i, condition in enumerate(conditions):
-        logger.debug(f"Condition {i+1}: {condition}")
+        logger.info(f"Condition {i+1}: {condition}")
     for i, action in enumerate(actions):
-        logger.debug(f"Action {i+1}: {action}")
+        logger.info(f"Action {i+1}: {action}")
 
     # Check if the trigger is enabled
     if not trigger.is_enabled:
@@ -109,18 +114,19 @@ async def setup_test():
 
 async def simulate_form_submission():
     """Simulate a form submission that would trigger the workflow."""
+    logger.info("🏥 Starting medical form workflow simulation")
     user, event = await setup_test()
 
     if not event:
-        logger.error("Setup failed - missing event or trigger")
+        logger.error("❌ Setup failed - missing event or trigger")
         return 1
 
     # Create medical form with high BMI
     height = 180  # cm
     weight = 150  # kg
 
-    logger.info(f"Simulating medical form submission for {user.username}")
-    logger.info(f"Height: {height}cm, Weight: {weight}kg")
+    logger.info(f"📋 Simulating medical form submission for patient '{user.username}'")
+    logger.info(f"📊 Patient data: Height: {height}cm, Weight: {weight}kg")
 
     # Debug: Check triggers_settings
     from triggers import settings as triggers_settings
@@ -136,6 +142,7 @@ async def simulate_form_submission():
     logger.debug(f"Event signal handler: {on_event_fired}")
 
     # Create the form - this should trigger the MedicalForm.submitted signal
+    logger.info("📝 Creating medical form record in database...")
     form = await sync_to_async(MedicalForm.objects.create)(
         user=user,
         height_cm=height,
@@ -147,39 +154,49 @@ async def simulate_form_submission():
 
     # Calculate BMI for display
     bmi = await sync_to_async(getattr)(form, "bmi")
-    logger.info(f"Form created with BMI: {bmi}")
+    logger.info(f"✅ Form created with BMI: {bmi:.1f}")
 
-    # Manually fire the event with explicit debug
-    logger.info("Manually firing the event...")
-
-    # Calculate expected workflow ID
-    workflow_id = f"trigger-{event.trigger_id}-{user.id}-{event.pk}"
-    logger.debug(f"Expected workflow ID: {workflow_id}")
-
-    # First get the receiver functions for the Event.fired signal
-    signal = event.__class__.fired
-    logger.debug(f"Signal receivers: {list(signal.receivers)}")
-
-    await sync_to_async(event.fire_single)(
-        user.id,
-        bmi=bmi,
-        height=height,
-        weight=weight,
+    logger.info("⏳ Waiting for Temporal workflow to execute...")
+    logger.info(
+        "📊 Check Temporal UI for workflow execution details: http://localhost:8233"
     )
 
-    logger.info("Form submitted and event fired successfully")
-    logger.info("Check your Temporal worker logs for workflow execution")
+    # Sleep to allow the workflow to complete (just for demonstration purposes)
+    await asyncio.sleep(2)
 
+    # Check for created appointments after workflow execution
+    from examples.models import DoctorAppointment
+
+    appointments = await sync_to_async(list)(
+        DoctorAppointment.objects.filter(user=user).order_by("-appointment_date")
+    )
+
+    if appointments:
+        logger.info(f"✅ Successfully created {len(appointments)} appointment(s):")
+        for i, appt in enumerate(
+            appointments[:3]
+        ):  # Show at most 3 most recent appointments
+            appt_date = await sync_to_async(getattr)(appt, "appointment_date")
+            appt_doctor = await sync_to_async(getattr)(appt, "doctor_name")
+            logger.info(
+                f"  📅 Appointment #{i+1}: {appt_date.strftime('%Y-%m-%d')} with {appt_doctor}"
+            )
+    else:
+        logger.warning(
+            "⚠️ No appointments were created. Check the workflow execution logs."
+        )
+
+    logger.info("🏁 Workflow simulation completed")
     return 0
 
 
 async def main():
     """Main entry point for the script."""
     try:
-        logger.info("Starting medical form submission test")
+        logger.info("▶️ Starting medical form submission test")
         return await simulate_form_submission()
     except Exception as e:
-        logger.exception(f"Error during test: {str(e)}")
+        logger.exception(f"❌ Error during test: {str(e)}")
         return 1
 
 
@@ -188,5 +205,5 @@ if __name__ == "__main__":
         exit_code = asyncio.run(main())
         sys.exit(exit_code)
     except KeyboardInterrupt:
-        logger.info("Test interrupted by user")
+        logger.info("⛔ Test interrupted by user")
         sys.exit(1)

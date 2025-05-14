@@ -7,6 +7,7 @@ import datetime
 from django.utils import timezone
 from django.template import Template, Context
 from django.dispatch import receiver, Signal
+import logging
 
 from triggers.models import Event, Condition, Action
 
@@ -126,7 +127,34 @@ class HighBMICondition(Condition):
         # For this example, we'll use the context directly in perform_action
         # This method will always return True, the actual check happens when
         # we access the BMI value from context
-        return True
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"🔍 Checking if user {user.username} has BMI above threshold of {self.threshold}"
+        )
+
+        # Try to get the most recent form to check BMI
+        try:
+            latest_form = MedicalForm.objects.filter(user=user).latest(
+                "submission_date"
+            )
+            bmi = latest_form.bmi
+            logger.info(f"📊 Found BMI value from latest form: {bmi}")
+
+            result = bmi > float(self.threshold)
+            if result:
+                logger.info(
+                    f"⚠️ High BMI detected: {bmi} > {self.threshold} - condition SATISFIED"
+                )
+            else:
+                logger.info(
+                    f"✓ BMI {bmi} is below threshold {self.threshold} - condition NOT SATISFIED"
+                )
+
+            return result
+        except MedicalForm.DoesNotExist:
+            # If we can't find a form, we'll defer to the context check in the action
+            logger.info("ℹ️ No medical form found - deferring to action context check")
+            return True
 
     def __str__(self):
         return f"BMI > {self.threshold}"
@@ -170,10 +198,22 @@ class ScheduleDoctorAppointmentAction(Action):
     def perform(self, user, context):
         # Check the BMI in the context
         bmi = context.get("bmi", 0)
+        height = context.get("height", 0)
+        weight = context.get("weight", 0)
+
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"🩺 Evaluating appointment need for patient {user.username} (BMI: {bmi})"
+        )
 
         # Only proceed if BMI exceeds our threshold (as a backup check)
         if bmi <= 45:
+            logger.info(f"✓ No appointment needed - BMI {bmi} is below threshold of 45")
             return
+
+        logger.info(
+            f"⚠️ High BMI detected: {bmi} (height: {height}cm, weight: {weight}kg)"
+        )
 
         # Calculate appointment date
         appointment_date = timezone.now() + datetime.timedelta(days=self.days_ahead)
@@ -182,6 +222,11 @@ class ScheduleDoctorAppointmentAction(Action):
         template = Template(self.appointment_reason_template)
         reason = template.render(Context(context))
 
+        logger.info(
+            f"📅 Scheduling appointment with {self.doctor_name} on {appointment_date.strftime('%Y-%m-%d')}"
+        )
+        logger.info(f"📝 Reason: {reason}")
+
         # Create the appointment
         appointment = DoctorAppointment.objects.create(
             user=user,
@@ -189,6 +234,8 @@ class ScheduleDoctorAppointmentAction(Action):
             doctor_name=self.doctor_name,
             reason=reason,
         )
+
+        logger.info(f"✅ Appointment #{appointment.pk} created successfully")
 
         # Notify the user (in a real app, this would send an email)
         user.email_user(
@@ -203,5 +250,7 @@ class ScheduleDoctorAppointmentAction(Action):
                 f"Regards,\nMedical Team"
             ),
         )
+
+        logger.info(f"📧 Email notification sent to {user.email}")
 
         return appointment

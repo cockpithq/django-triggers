@@ -21,9 +21,18 @@ import django
 # Configure logging first
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+# Enable detailed logging for specific modules
+logging.getLogger("triggers").setLevel(logging.INFO)
+logging.getLogger("triggers.temporal").setLevel(logging.INFO)
+logging.getLogger("examples").setLevel(logging.INFO)
+logging.getLogger("temporalio").setLevel(
+    logging.WARNING
+)  # Only show warnings from the Temporal SDK
+
 logger = logging.getLogger(__name__)
 
 # Set up Django
@@ -55,33 +64,33 @@ async def run_worker(task_queue=None):
     """Run a Temporal worker for django-triggers."""
     # Check if Temporal integration is enabled
     if not triggers_settings.TRIGGERS_USE_TEMPORAL:
-        logger.error("Temporal integration is not enabled")
+        logger.error("❌ Temporal integration is not enabled")
         logger.error("Please add TRIGGERS_USE_TEMPORAL = True to your settings")
         return 1
 
     # Use the configured task queue or override
     task_queue = task_queue or triggers_settings.TEMPORAL_TASK_QUEUE
 
-    logger.info(f"Starting Temporal worker on task queue: {task_queue}")
-    logger.info(f"Using Temporal server: {triggers_settings.TEMPORAL_HOST}")
-    logger.info(f"Using namespace: {triggers_settings.TEMPORAL_NAMESPACE}")
+    logger.info(f"🚀 Starting Temporal worker on task queue: {task_queue}")
+    logger.info(f"🔌 Using Temporal server: {triggers_settings.TEMPORAL_HOST}")
+    logger.info(f"🔍 Using namespace: {triggers_settings.TEMPORAL_NAMESPACE}")
 
     try:
         # Initialize Temporal client
         client = await get_temporal_client()
 
-        logger.info("Successfully connected to Temporal server")
-        logger.info(f"Namespace: {client.namespace}")
+        logger.info("✅ Successfully connected to Temporal server")
+        logger.info(f"🔍 Namespace: {client.namespace}")
 
         # List registered workflows and activities
-        logger.info("Registering workflows:")
+        logger.info("📋 Registering workflows:")
         for workflow in [TriggerWorkflow]:
             workflow_name = getattr(
                 workflow, "__temporal_workflow_definition__", {}
             ).get("name", "unknown")
-            logger.info(f" - {workflow.__name__} (name: {workflow_name})")
+            logger.info(f" ↪ {workflow.__name__} (name: {workflow_name})")
 
-        logger.info("Registering activities:")
+        logger.info("📋 Registering activities:")
         for activity in [
             fetch_trigger_definition,
             evaluate_condition,
@@ -91,7 +100,7 @@ async def run_worker(task_queue=None):
             activity_name = getattr(
                 activity, "__temporal_activity_definition__", {}
             ).get("name", "unknown")
-            logger.info(f" - {activity.__name__} (name: {activity_name})")
+            logger.info(f" ↪ {activity.__name__} (name: {activity_name})")
 
         # Create a worker
         worker = Worker(
@@ -106,17 +115,20 @@ async def run_worker(task_queue=None):
             ],
         )
 
-        logger.info("Worker created successfully")
-        logger.info("Worker is running. Press Ctrl+C to stop.")
+        logger.info("✅ Worker created successfully")
+        logger.info("⚙️ Worker is running. Press Ctrl+C to stop.")
+        logger.info(
+            "🌐 Check Temporal UI at http://localhost:8233 to monitor workflows"
+        )
 
         # Run the worker (this is a blocking call)
         await worker.run()
 
     except KeyboardInterrupt:
-        logger.info("Worker stopped by user")
+        logger.info("👋 Worker stopped by user")
         return 0
     except Exception as e:
-        logger.error(f"Error running worker: {e}")
+        logger.error(f"❌ Error running worker: {e}")
         import traceback
 
         traceback.print_exc()
@@ -143,7 +155,11 @@ if __name__ == "__main__":
 
     # Set debug logging if requested
     if args.debug:
+        logging.getLogger("triggers").setLevel(logging.DEBUG)
+        logging.getLogger("triggers.temporal").setLevel(logging.DEBUG)
+        logging.getLogger("examples").setLevel(logging.DEBUG)
         logging.getLogger().setLevel(logging.DEBUG)
+        logger.info("🔍 Debug logging enabled")
 
     # Run the worker
     exit_code = asyncio.run(run_worker(args.task_queue))
