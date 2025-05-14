@@ -1,4 +1,5 @@
 # django-triggers [![Latest Version][latest-version-image]][latest-version-link]
+
 [![Test Status][test-status-image]][test-status-link]
 [![codecov][codecov-image]][codecov-link]
 [![Python Support][python-support-image]][python-support-link]
@@ -20,8 +21,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-
-### Prerequisites 
+### Prerequisites
 
 Celery is required to be setup in your project.
 
@@ -34,6 +34,7 @@ Let's consider a simple tasks app with a model `Task` and we want to email a use
 By doing this, we separate the development of the trigger components from their configuration within the Django admin panel. This ensures a more modular and manageable approach to building and configuring triggers.
 
 The full code example is available in [tests directory](https://github.com/cockpithq/django-triggers/tree/main/tests/app).
+
 ```python
 from django.dispatch import receiver, Signal
 from django.contrib.auth.models import User
@@ -60,12 +61,12 @@ class Task(models.Model):
 
 # At first, implement an Event which will trigger the notification.
 class TaskCompletedEvent(Event):
-    # By setting the following `important_only` field through the Django admin site 
+    # By setting the following `important_only` field through the Django admin site
     # we can configure what tasks (all or important only) we want to notify the users about.
     important_only = models.BooleanField(
-        default=False, 
+        default=False,
         help_text='Fire the event for important tasks only if checked.',
-    ) 
+    )
 
     def should_be_fired(self, **kwargs) -> bool:
         if self.important_only:
@@ -90,6 +91,7 @@ class SendEmailAction(Action):
 ```
 
 2. Makemigrations and migrate
+
 ```shell
 python manage.py makemigrations
 python manage.py migrate
@@ -115,26 +117,90 @@ You may also trigger it manually from the Django admin site if you're checking t
 ## Development
 
 ### Run a django-admin command, e.g. `makemigrations`
+
 ```shell
 poetry run python -m django makemigrations --settings=tests.app.settings
 ```
 
 ### Run isort
+
 ```shell
 poetry run isort triggers tests
 ```
+
 ### Run flake8
+
 ```shell
 poetry run flake8 triggers tests
 ```
+
 ### Run mypy
+
 ```shell
 poetry run mypy triggers tests
 ```
+
 ### Run pytest
+
 ```shell
 poetry run pytest
 ```
+
+## Temporal Integration
+
+Starting with version 1.1.0, django-triggers supports using [Temporal](https://temporal.io/) as an alternative to Celery for trigger execution. Temporal provides advanced workflow capabilities like long-running user journeys, workflow versioning, and replay protection.
+
+### Setup
+
+1. Install the required dependencies:
+
+```shell
+# Using uv
+uv add temporalio asgiref
+uv sync
+
+# Or with pip
+pip install temporalio asgiref
+```
+
+2. Enable Temporal integration in your Django settings:
+
+```python
+# in your project's settings.py
+TRIGGERS_USE_TEMPORAL = True
+
+# Optional Temporal configuration
+TEMPORAL_HOST = "localhost:7233"  # Your Temporal server address
+TEMPORAL_NAMESPACE = "triggers"    # Your Temporal namespace
+TEMPORAL_TASK_QUEUE = "triggers"   # Task queue for trigger workflows
+```
+
+3. Start a Temporal worker to process trigger workflows:
+
+```shell
+python manage.py temporal_worker
+```
+
+### Migrating from Celery
+
+The Temporal integration is designed to work alongside the existing Celery-based implementation, allowing for a gradual migration:
+
+1. Install the Temporal SDK and enable it in your settings
+2. Run both Celery and Temporal workers during the transition
+3. Once verified, you can disable the Celery worker
+
+The trigger models, admin interface, and API remain unchanged, making this a seamless backend upgrade.
+
+### Advanced Temporal Features
+
+Temporal enables several advanced workflow patterns that weren't possible with Celery:
+
+- **Long-running user journeys**: Create multi-step workflows that can span days or weeks
+- **Workflow versioning**: Update workflow code without affecting in-flight executions
+- **Exact-once execution**: Workflows are guaranteed to execute once, even after crashes or restarts
+- **Workflow replay protection**: Temporal's workflow engine ensures deterministic execution
+
+For more information about Temporal, see the [Temporal documentation](https://docs.temporal.io/).
 
 [latest-version-image]: https://img.shields.io/pypi/v/dj-triggers.svg
 [latest-version-link]: https://pypi.org/project/dj-triggers/
