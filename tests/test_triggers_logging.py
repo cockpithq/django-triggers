@@ -1,22 +1,23 @@
 import uuid
 
-import pytest
 from django.contrib.auth import get_user_model
+import pytest
 
-from triggers.models import Event, Trigger, Action, TriggerLog, log_trigger_event
+from triggers.models import Action, Event, Trigger, TriggerLog, log_trigger_event
 from triggers.tasks import handle_event
+
 
 User = get_user_model()
 
 
 @pytest.fixture
 def user():
-    return User.objects.create_user(username='test_user', password='password')
+    return User.objects.create_user(username="test_user", password="password")
 
 
 @pytest.fixture
 def trigger():
-    return Trigger.objects.create(name='Test Trigger', is_enabled=True)
+    return Trigger.objects.create(name="Test Trigger", is_enabled=True)
 
 
 @pytest.fixture
@@ -31,18 +32,18 @@ def test_action(trigger):
     return Action._default_manager.create(trigger=trigger)
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_run_id_generation_and_propagation(user, trigger, event):
     """Test that run_id is generated and propagated through the trigger lifecycle"""
     # Fire the event
     event.fire_single(user_pk=user.pk)
     
     # Check that a log entry was created for "fire" stage
-    logs = TriggerLog.objects.filter(entity_type='event', stage='fire')
+    logs = TriggerLog.objects.filter(entity_type="event", stage="fire")
     assert logs.exists()
     
     # Get the run_id
-    run_id = logs.order_by('id').first().run_id
+    run_id = logs.order_by("id").first().run_id
     assert run_id is not None
     
     # Check that all logs for this run have the same run_id
@@ -52,12 +53,12 @@ def test_run_id_generation_and_propagation(user, trigger, event):
     assert logs_for_run.count() >= 2
     
     # Check for specific stages
-    stages = set(log.stage for log in logs_for_run)
-    assert 'fire' in stages
-    assert 'should_be_fired' in stages
+    stages = set(log.stage for log in logs_for_run)  # noqa: C401
+    assert "fire" in stages
+    assert "should_be_fired" in stages
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_trigger_filtering_logging(user, trigger, event):
     """Test that filtering steps are properly logged"""
     # Disable the trigger
@@ -69,18 +70,18 @@ def test_trigger_filtering_logging(user, trigger, event):
     
     # Check that the inactive trigger is logged
     log = TriggerLog.objects.filter(
-        entity_type='trigger',
-        stage='trigger_filter',
+        entity_type="trigger",
+        stage="trigger_filter",
         result=False
     ).first()
     
     assert log is not None
     assert log.trigger.pk == trigger.pk
-    assert 'reason' in log.details
-    assert log.details['reason'] == 'Trigger not active'
+    assert "reason" in log.details
+    assert log.details["reason"] == "Trigger not active"
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_event_handling_logging(user, trigger, event):
     """Test that event handling stages are properly logged"""
     # Use mocking to simulate event handling
@@ -90,7 +91,7 @@ def test_event_handling_logging(user, trigger, event):
         
     # Extract run_id from current test
     event.fire_single(user_pk=user.pk)
-    run_id = TriggerLog.objects.order_by('id').first().run_id
+    run_id = TriggerLog.objects.order_by("id").first().run_id
 
     print(f"run_id: {run_id}")
 
@@ -102,19 +103,19 @@ def test_event_handling_logging(user, trigger, event):
     
     # Should have logs for different stages
     stages = [log.stage for log in logs]
-    assert 'fire' in stages
-    assert 'should_be_fired' in stages
-    assert 'handle_start' in stages
+    assert "fire" in stages
+    assert "should_be_fired" in stages
+    assert "handle_start" in stages
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_log_retrieval_by_entity(user, trigger, event):
     """Test that logs can be retrieved and entity objects accessed"""
     # Fire the event
     event.fire_single(user_pk=user.pk)
     
     # Get log
-    log = TriggerLog.objects.filter(entity_type='event', entity_id=event.pk).first()
+    log = TriggerLog.objects.filter(entity_type="event", entity_id=event.pk).first()
     
     # Check entity restoration
     entity = log.get_entity_object()
@@ -123,7 +124,7 @@ def test_log_retrieval_by_entity(user, trigger, event):
     assert entity.__class__ == event.__class__
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_action_execution_logging(user, trigger, event):
     """Test that action execution is properly logged"""
     # Create a test Action using Action model
@@ -133,8 +134,8 @@ def test_action_execution_logging(user, trigger, event):
     run_id = uuid.uuid4()
     log_trigger_event(
         entity=action,
-        entity_type='action',
-        stage='action_perform',
+        entity_type="action",
+        stage="action_perform",
         trigger=trigger,
         user=user,
         result=True,
@@ -143,8 +144,8 @@ def test_action_execution_logging(user, trigger, event):
     
     # Check that the log was created
     log = TriggerLog.objects.filter(
-        entity_type='action',
-        stage='action_perform',
+        entity_type="action",
+        stage="action_perform",
         result=True,
         run_id=run_id
     ).first()
