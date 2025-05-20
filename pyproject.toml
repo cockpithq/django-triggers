@@ -42,6 +42,7 @@ dev = [
     "pytest-cov>=4.0.0,<5",
     "celery-types>=0.14.0,<0.15",
     "flake8-pytest-style>=1.7.2,<2",
+    "setuptools>=68.0.0",
 ]
 
 [tool.hatch.build.targets.sdist]
