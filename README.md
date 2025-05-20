@@ -5,6 +5,8 @@
 
 `django-triggers` is intended for implementing event-based business logic configurable through the Django admin site.
 
+This package supports **Python 3.8+**.
+
 ## Install
 
 ```shell
