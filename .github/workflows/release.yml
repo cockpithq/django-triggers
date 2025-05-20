@@ -3,7 +3,7 @@ on:
     types: [published]
 jobs:
   release:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
@@ -16,15 +16,16 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          version: "0.7.6" # Pin to a specific version for stability
 
       - name: Install build dependencies
-        run: uv pip install build twine
+        run: uv pip install --system build twine
 
       - name: Build
-        run: python -m build
+        run: uv run python -m build
 
       - name: Publish
         env:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: python -m twine upload dist/*
+        run: uv run python -m twine upload dist/*
