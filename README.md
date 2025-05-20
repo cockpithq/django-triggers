@@ -1,4 +1,5 @@
 # django-triggers [![Latest Version][latest-version-image]][latest-version-link]
+
 [![Test Status][test-status-image]][test-status-link]
 [![codecov][codecov-image]][codecov-link]
 [![Python Support][python-support-image]][python-support-link]
@@ -20,8 +21,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-
-### Prerequisites 
+### Prerequisites
 
 Celery is required to be setup in your project.
 
@@ -34,6 +34,7 @@ Let's consider a simple tasks app with a model `Task` and we want to email a use
 By doing this, we separate the development of the trigger components from their configuration within the Django admin panel. This ensures a more modular and manageable approach to building and configuring triggers.
 
 The full code example is available in [tests directory](https://github.com/cockpithq/django-triggers/tree/main/tests/app).
+
 ```python
 from django.dispatch import receiver, Signal
 from django.contrib.auth.models import User
@@ -60,12 +61,12 @@ class Task(models.Model):
 
 # At first, implement an Event which will trigger the notification.
 class TaskCompletedEvent(Event):
-    # By setting the following `important_only` field through the Django admin site 
+    # By setting the following `important_only` field through the Django admin site
     # we can configure what tasks (all or important only) we want to notify the users about.
     important_only = models.BooleanField(
-        default=False, 
+        default=False,
         help_text='Fire the event for important tasks only if checked.',
-    ) 
+    )
 
     def should_be_fired(self, **kwargs) -> bool:
         if self.important_only:
@@ -90,6 +91,7 @@ class SendEmailAction(Action):
 ```
 
 2. Makemigrations and migrate
+
 ```shell
 python manage.py makemigrations
 python manage.py migrate
@@ -115,25 +117,52 @@ You may also trigger it manually from the Django admin site if you're checking t
 ## Development
 
 ### Run a django-admin command, e.g. `makemigrations`
+
 ```shell
-poetry run python -m django makemigrations --settings=tests.app.settings
+uv venv
+uv pip install -e .
+python -m django makemigrations --settings=tests.app.settings
 ```
 
 ### Run isort
+
 ```shell
-poetry run isort triggers tests
+uv pip install isort
+isort triggers tests
 ```
+
 ### Run flake8
+
 ```shell
-poetry run flake8 triggers tests
+uv pip install flake8
+flake8 triggers tests
 ```
+
 ### Run mypy
+
 ```shell
-poetry run mypy triggers tests
+uv pip install mypy
+mypy triggers tests
 ```
+
 ### Run pytest
+
 ```shell
-poetry run pytest
+uv pip install pytest pytest-django
+pytest
+```
+
+### Quick setup for development
+
+```shell
+# Create and activate virtual environment
+uv venv && source .venv/bin/activate
+
+# Install all dependencies at once
+uv pip install -e ".[dev]"
+
+# Sync dependencies from pyproject.toml
+uv sync
 ```
 
 [latest-version-image]: https://img.shields.io/pypi/v/dj-triggers.svg

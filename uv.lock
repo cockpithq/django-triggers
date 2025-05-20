@@ -3,7 +3,8 @@ revision = 1
 requires-python = ">=3.7.2, <4.0"
 resolution-markers = [
     "python_full_version >= '3.9'",
-    "python_full_version < '3.9'",
+    "python_full_version == '3.8.*'",
+    "python_full_version < '3.8'",
 ]
 
 [[package]]
@@ -398,7 +399,7 @@ version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.8'" },
-    { name = "zipp", marker = "python_full_version < '3.9'" },
+    { name = "zipp", marker = "python_full_version < '3.8'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/7c/126a8686399ebe256b5e4343ea80b6f2ee91549969da2eef0bb2891b8d24/importlib_metadata-4.2.0.tar.gz", hash = "sha256:b7e52a1f8dec14a75ea73e0891f3060099ca1d8e6a462a4dff11c3e119ea1b31", size = 38311 }
 wheels = [
