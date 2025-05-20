@@ -467,8 +467,24 @@ def log_trigger_event(entity, entity_type, stage, trigger=None, user=None, resul
     :param details: Additional details (dictionary)
     :param run_id: Execution identifier. If not specified, a new one is generated.
     """
-    if hasattr(entity, 'trigger') and not trigger:
-        trigger = entity.trigger
+    # Improved trigger detection logic
+    if trigger is None:
+        # If this is a trigger, use it directly
+        if entity_type == 'trigger' and isinstance(entity, Trigger):
+            trigger = entity
+        # If the entity has a trigger attribute and it's a Trigger model
+        elif hasattr(entity, 'trigger') and isinstance(entity.trigger, Trigger):
+            trigger = entity.trigger
+        # If we have an attribute related to the trigger, try to use it
+        elif hasattr(entity, 'trigger_id') and entity.trigger_id:
+            try:
+                trigger = Trigger.objects.get(pk=entity.trigger_id)
+            except Trigger.DoesNotExist:
+                pass
+    # Check that the trigger is defined
+    if trigger is None:
+        # Can throw an exception or just add information about missing trigger to details
+        return None
     
     if not details:
         details = {}
@@ -480,7 +496,8 @@ def log_trigger_event(entity, entity_type, stage, trigger=None, user=None, resul
     # Get string path to the object class
     entity_class = entity.__class__
     entity_class_path = f"{entity_class.__module__}.{entity_class.__name__}"
-    
+
+    # If needed to verify or fix, probably better
     TriggerLog.objects.create(
         run_id=run_id,
         entity_type=entity_type,
