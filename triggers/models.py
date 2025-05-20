@@ -447,7 +447,7 @@ class TriggerLog(models.Model):
             
             # Return the object
             return entity_class.objects.get(pk=self.entity_id)
-        except (ImportError, AttributeError, ValueError) as e:
+        except (ImportError, AttributeError, ValueError):
             return None
         except models.ObjectDoesNotExist:
             # Object has been deleted

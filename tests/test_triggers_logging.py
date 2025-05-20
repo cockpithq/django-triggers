@@ -1,12 +1,10 @@
 import uuid
-from unittest import mock
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.apps import apps
 
-from triggers.models import Event, Trigger, Action, TriggerLog, Condition, log_trigger_event
-from triggers.tasks import on_event_fired, handle_event
+from triggers.models import Event, Trigger, Action, TriggerLog, log_trigger_event
+from triggers.tasks import handle_event
 
 User = get_user_model()
 
