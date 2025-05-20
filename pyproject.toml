@@ -62,6 +62,11 @@ exclude_lines = [
   "raise NotImplementedError"
 ]
 
+[tool.coverage.run]
+omit = [
+  "*/admin.py"
+]
+
 [tool.django-stubs]
 django_settings_module = "tests.app.settings"
 
