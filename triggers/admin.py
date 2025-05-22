@@ -1,5 +1,7 @@
 from typing import Iterable, List, Tuple, Type
+import datetime
 
+from django.utils import timezone
 from django.contrib import admin
 from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
@@ -203,9 +205,6 @@ class TimestampFilter(admin.SimpleListFilter):
         ]
 
     def queryset(self, request, queryset):
-        from django.utils import timezone
-        import datetime
-        
         now = timezone.now()
         if self.value() == "last_hour":
             return queryset.filter(timestamp__gte=now - datetime.timedelta(hours=1))
