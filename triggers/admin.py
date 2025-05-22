@@ -9,7 +9,7 @@ from more_admin_filters import MultiSelectRelatedOnlyFilter
 from polymorphic.admin import PolymorphicInlineSupportMixin, StackedPolymorphicInline
 from polymorphic.models import PolymorphicModel
 
-from triggers.models import Action, Activity, Condition, Event, Trigger, User, get_model_name, TriggerLog
+from triggers.models import Action, Activity, Condition, Event, Trigger, User, TriggerLog, get_model_name
 
 
 def get_child_models(cls: Type[PolymorphicModel]) -> Iterable[Type[PolymorphicModel]]:
