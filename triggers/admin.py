@@ -286,23 +286,6 @@ class TriggerLogAdmin(admin.ModelAdmin):
         # Allow deletion for log cleanup
         return True
     
-    def entity_link(self, obj):
-        """Generate a link to the entity if possible"""
-        entity = obj.get_entity_object()
-        if entity:
-            from django.urls import reverse
-            from django.utils.html import format_html
-            try:
-                app_label = entity._meta.app_label
-                model_name = entity._meta.model_name
-                url = reverse(f"admin:{app_label}_{model_name}_change", args=[entity.pk])
-                return format_html("<a href=\"{}\">{}</a>", url, obj.entity_name)
-            except:
-                pass
-        return obj.entity_name
-    entity_link.short_description = _("Entity")
-    entity_link.admin_order_field = "entity_name"
-    
     fieldsets = (
         (_("Basic Information"), {
             "fields": ("timestamp", "run_id", "stage", "result")
