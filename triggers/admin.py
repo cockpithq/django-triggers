@@ -175,13 +175,13 @@ class ActivityActionAdmin(admin.ModelAdmin):
 
 
 class RunIdFilter(admin.SimpleListFilter):
-    title = _('Execution')
-    parameter_name = 'run_id'
+    title = _("Execution")
+    parameter_name = "run_id"
 
     def lookups(self, request, model_admin):
         # Get unique run_ids from the last 100 logs
-        run_ids = TriggerLog.objects.order_by('-timestamp').values_list('run_id', flat=True).distinct()[:100]
-        return [(str(run_id), str(run_id)[:8] + '...') for run_id in run_ids]
+        run_ids = TriggerLog.objects.order_by("-timestamp").values_list("run_id", flat=True).distinct()[:100]
+        return [(str(run_id), str(run_id)[:8] + "...") for run_id in run_ids]
 
     def queryset(self, request, queryset):
         if self.value():
@@ -190,16 +190,16 @@ class RunIdFilter(admin.SimpleListFilter):
 
 
 class TimestampFilter(admin.SimpleListFilter):
-    title = _('Time')
-    parameter_name = 'time_period'
+    title = _("Time")
+    parameter_name = "time_period"
 
     def lookups(self, request, model_admin):
         return [
-            ('last_hour', _('Last hour')),
-            ('today', _('Today')),
-            ('yesterday', _('Yesterday')),
-            ('this_week', _('This week')),
-            ('this_month', _('This month')),
+            ("last_hour", _("Last hour")),
+            ("today", _("Today")),
+            ("yesterday", _("Yesterday")),
+            ("this_week", _("This week")),
+            ("this_month", _("This month")),
         ]
 
     def queryset(self, request, queryset):
@@ -207,37 +207,37 @@ class TimestampFilter(admin.SimpleListFilter):
         import datetime
         
         now = timezone.now()
-        if self.value() == 'last_hour':
+        if self.value() == "last_hour":
             return queryset.filter(timestamp__gte=now - datetime.timedelta(hours=1))
-        elif self.value() == 'today':
+        elif self.value() == "today":
             return queryset.filter(timestamp__date=now.date())
-        elif self.value() == 'yesterday':
+        elif self.value() == "yesterday":
             return queryset.filter(timestamp__date=now.date() - datetime.timedelta(days=1))
-        elif self.value() == 'this_week':
+        elif self.value() == "this_week":
             week_start = now.date() - datetime.timedelta(days=now.weekday())
             return queryset.filter(timestamp__date__gte=week_start)
-        elif self.value() == 'this_month':
+        elif self.value() == "this_month":
             return queryset.filter(timestamp__year=now.year, timestamp__month=now.month)
         return queryset
 
 
 class ResultFilter(admin.SimpleListFilter):
-    title = _('Result')
-    parameter_name = 'result'
+    title = _("Result")
+    parameter_name = "result"
 
     def lookups(self, request, model_admin):
         return [
-            ('success', _('Success')),
-            ('failure', _('Failure')),
-            ('undefined', _('Undefined')),
+            ("success", _("Success")),
+            ("failure", _("Failure")),
+            ("undefined", _("Undefined")),
         ]
 
     def queryset(self, request, queryset):
-        if self.value() == 'success':
+        if self.value() == "success":
             return queryset.filter(result=True)
-        elif self.value() == 'failure':
+        elif self.value() == "failure":
             return queryset.filter(result=False)
-        elif self.value() == 'undefined':
+        elif self.value() == "undefined":
             return queryset.filter(result__isnull=True)
         return queryset
 
@@ -245,36 +245,36 @@ class ResultFilter(admin.SimpleListFilter):
 @admin.register(TriggerLog)
 class TriggerLogAdmin(admin.ModelAdmin):
     list_display = (
-        'timestamp', 'entity_type', 'entity_name', 'stage', 
-        'trigger', 'user', 'result', 'run_id_short'
+        "timestamp", "entity_type", "entity_name", "stage", 
+        "trigger", "user", "result", "run_id_short"
     )
     list_filter = (
         RunIdFilter,
-        'entity_type',
-        'stage',
-        'trigger',
+        "entity_type",
+        "stage",
+        "trigger",
         ResultFilter,
         TimestampFilter,
     )
     search_fields = (
-        'entity_name', 
-        'details', 
-        'entity_class_path', 
-        'run_id',
-        f'=user__{User.get_email_field_name()}',
-        f'=user__{User.USERNAME_FIELD}',
+        "entity_name", 
+        "details", 
+        "entity_class_path", 
+        "run_id",
+        f"=user__{User.get_email_field_name()}",
+        f"=user__{User.USERNAME_FIELD}",
     )
     readonly_fields = (
-        'timestamp', 'run_id', 'entity_type', 'entity_id', 
-        'entity_class_path', 'entity_name', 'trigger', 'user',
-        'stage', 'result', 'details'
+        "timestamp", "run_id", "entity_type", "entity_id", 
+        "entity_class_path", "entity_name", "trigger", "user",
+        "stage", "result", "details"
     )
-    date_hierarchy = 'timestamp'
+    date_hierarchy = "timestamp"
     
     def run_id_short(self, obj):
         """Display a shortened version of the run_id"""
-        return str(obj.run_id)[:8] + '...'
-    run_id_short.short_description = _('Run ID')
+        return str(obj.run_id)[:8] + "..."
+    run_id_short.short_description = _("Run ID")
     
     def has_add_permission(self, request):
         return False
@@ -295,25 +295,25 @@ class TriggerLogAdmin(admin.ModelAdmin):
             try:
                 app_label = entity._meta.app_label
                 model_name = entity._meta.model_name
-                url = reverse(f'admin:{app_label}_{model_name}_change', args=[entity.pk])
-                return format_html('<a href="{}">{}</a>', url, obj.entity_name)
+                url = reverse(f"admin:{app_label}_{model_name}_change", args=[entity.pk])
+                return format_html("<a href=\"{}\">{}</a>", url, obj.entity_name)
             except:
                 pass
         return obj.entity_name
-    entity_link.short_description = _('Entity')
-    entity_link.admin_order_field = 'entity_name'
+    entity_link.short_description = _("Entity")
+    entity_link.admin_order_field = "entity_name"
     
     fieldsets = (
-        (_('Basic Information'), {
-            'fields': ('timestamp', 'run_id', 'stage', 'result')
+        (_("Basic Information"), {
+            "fields": ("timestamp", "run_id", "stage", "result")
         }),
-        (_('Entity'), {
-            'fields': ('entity_type', 'entity_id', 'entity_class_path', 'entity_name')
+        (_("Entity"), {
+            "fields": ("entity_type", "entity_id", "entity_class_path", "entity_name")
         }),
-        (_('Relations'), {
-            'fields': ('trigger', 'user')
+        (_("Relations"), {
+            "fields": ("trigger", "user")
         }),
-        (_('Details'), {
-            'fields': ('details',)
+        (_("Details"), {
+            "fields": ("details",)
         }),
     )
