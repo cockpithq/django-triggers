@@ -1,15 +1,24 @@
-from typing import Iterable, List, Tuple, Type
 import datetime
+from typing import Iterable, List, Tuple, Type
 
-from django.utils import timezone
 from django.contrib import admin
+from django.utils import timezone
 from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
 from more_admin_filters import MultiSelectRelatedOnlyFilter
 from polymorphic.admin import PolymorphicInlineSupportMixin, StackedPolymorphicInline
 from polymorphic.models import PolymorphicModel
 
-from triggers.models import Action, Activity, Condition, Event, Trigger, User, TriggerLog, get_model_name
+from triggers.models import (
+    Action, 
+    Activity, 
+    Condition, 
+    Event, 
+    Trigger, 
+    TriggerLog, 
+    User, 
+    get_model_name,
+)
 
 
 def get_child_models(cls: Type[PolymorphicModel]) -> Iterable[Type[PolymorphicModel]]:
