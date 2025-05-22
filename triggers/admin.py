@@ -7,7 +7,7 @@ from more_admin_filters import MultiSelectRelatedOnlyFilter
 from polymorphic.admin import PolymorphicInlineSupportMixin, StackedPolymorphicInline
 from polymorphic.models import PolymorphicModel
 
-from triggers.models import Action, Activity, Condition, Event, Trigger, User, get_model_name
+from triggers.models import Action, Activity, Condition, Event, Trigger, User, get_model_name, TriggerLog
 
 
 def get_child_models(cls: Type[PolymorphicModel]) -> Iterable[Type[PolymorphicModel]]:
@@ -172,3 +172,148 @@ class ActivityActionAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request, obj=None):
         return False
+
+
+class RunIdFilter(admin.SimpleListFilter):
+    title = _('Execution')
+    parameter_name = 'run_id'
+
+    def lookups(self, request, model_admin):
+        # Get unique run_ids from the last 100 logs
+        run_ids = TriggerLog.objects.order_by('-timestamp').values_list('run_id', flat=True).distinct()[:100]
+        return [(str(run_id), str(run_id)[:8] + '...') for run_id in run_ids]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(run_id=self.value())
+        return queryset
+
+
+class TimestampFilter(admin.SimpleListFilter):
+    title = _('Time')
+    parameter_name = 'time_period'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('last_hour', _('Last hour')),
+            ('today', _('Today')),
+            ('yesterday', _('Yesterday')),
+            ('this_week', _('This week')),
+            ('this_month', _('This month')),
+        ]
+
+    def queryset(self, request, queryset):
+        from django.utils import timezone
+        import datetime
+        
+        now = timezone.now()
+        if self.value() == 'last_hour':
+            return queryset.filter(timestamp__gte=now - datetime.timedelta(hours=1))
+        elif self.value() == 'today':
+            return queryset.filter(timestamp__date=now.date())
+        elif self.value() == 'yesterday':
+            return queryset.filter(timestamp__date=now.date() - datetime.timedelta(days=1))
+        elif self.value() == 'this_week':
+            week_start = now.date() - datetime.timedelta(days=now.weekday())
+            return queryset.filter(timestamp__date__gte=week_start)
+        elif self.value() == 'this_month':
+            return queryset.filter(timestamp__year=now.year, timestamp__month=now.month)
+        return queryset
+
+
+class ResultFilter(admin.SimpleListFilter):
+    title = _('Result')
+    parameter_name = 'result'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('success', _('Success')),
+            ('failure', _('Failure')),
+            ('undefined', _('Undefined')),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'success':
+            return queryset.filter(result=True)
+        elif self.value() == 'failure':
+            return queryset.filter(result=False)
+        elif self.value() == 'undefined':
+            return queryset.filter(result__isnull=True)
+        return queryset
+
+
+@admin.register(TriggerLog)
+class TriggerLogAdmin(admin.ModelAdmin):
+    list_display = (
+        'timestamp', 'entity_type', 'entity_name', 'stage', 
+        'trigger', 'user', 'result', 'run_id_short'
+    )
+    list_filter = (
+        RunIdFilter,
+        'entity_type',
+        'stage',
+        'trigger',
+        ResultFilter,
+        TimestampFilter,
+    )
+    search_fields = (
+        'entity_name', 
+        'details', 
+        'entity_class_path', 
+        'run_id',
+        f'=user__{User.get_email_field_name()}',
+        f'=user__{User.USERNAME_FIELD}',
+    )
+    readonly_fields = (
+        'timestamp', 'run_id', 'entity_type', 'entity_id', 
+        'entity_class_path', 'entity_name', 'trigger', 'user',
+        'stage', 'result', 'details'
+    )
+    date_hierarchy = 'timestamp'
+    
+    def run_id_short(self, obj):
+        """Display a shortened version of the run_id"""
+        return str(obj.run_id)[:8] + '...'
+    run_id_short.short_description = _('Run ID')
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Allow deletion for log cleanup
+        return True
+    
+    def entity_link(self, obj):
+        """Generate a link to the entity if possible"""
+        entity = obj.get_entity_object()
+        if entity:
+            from django.urls import reverse
+            from django.utils.html import format_html
+            try:
+                app_label = entity._meta.app_label
+                model_name = entity._meta.model_name
+                url = reverse(f'admin:{app_label}_{model_name}_change', args=[entity.pk])
+                return format_html('<a href="{}">{}</a>', url, obj.entity_name)
+            except:
+                pass
+        return obj.entity_name
+    entity_link.short_description = _('Entity')
+    entity_link.admin_order_field = 'entity_name'
+    
+    fieldsets = (
+        (_('Basic Information'), {
+            'fields': ('timestamp', 'run_id', 'stage', 'result')
+        }),
+        (_('Entity'), {
+            'fields': ('entity_type', 'entity_id', 'entity_class_path', 'entity_name')
+        }),
+        (_('Relations'), {
+            'fields': ('trigger', 'user')
+        }),
+        (_('Details'), {
+            'fields': ('details',)
+        }),
+    )
