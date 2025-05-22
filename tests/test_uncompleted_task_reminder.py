@@ -1,16 +1,16 @@
 import datetime
-from typing import List, Optional
+from typing import Final, List, Optional
 
 from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from model_bakery import baker
 import pytest
-from typing_extensions import Final
 
 from tests.app.models import ClockEvent, HasUncompletedTaskCondition, SendEmailAction, Task
 from tests.app.tasks import clock
 from tests.utils import run_on_commit
 from triggers.models import ActionFrequencyCondition, Activity, Trigger
+
 
 MIN_FREQUENCY: Final[datetime.timedelta] = datetime.timedelta(days=1)
 
@@ -30,14 +30,14 @@ def has_uncompleted_task(request) -> bool:
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def user() -> User:
-    user = baker.make(User, first_name='Bob', email='bob@example.com')
+    user = baker.make(User, first_name="Bob", email="bob@example.com")
     baker.make(Task, user=user, is_completed=True)
     return user
 
 
-@pytest.fixture()
+@pytest.fixture
 def uncompleted_tasks(user, has_uncompleted_task) -> List[Task]:
     if has_uncompleted_task:
         return baker.make(Task, user=user, is_completed=False, _quantity=2)
@@ -46,7 +46,7 @@ def uncompleted_tasks(user, has_uncompleted_task) -> List[Task]:
 
 @pytest.fixture(autouse=True)
 def trigger(is_trigger_enabled: bool) -> Trigger:
-    trigger = baker.make(Trigger, is_enabled=is_trigger_enabled, name='Uncompleted Task Reminder')
+    trigger = baker.make(Trigger, is_enabled=is_trigger_enabled, name="Uncompleted Task Reminder")
     baker.make(ClockEvent, trigger=trigger)
     baker.make(HasUncompletedTaskCondition, trigger=trigger)
     # Remind about the tasks no more often than `MIN_FREQUENCY`
@@ -54,10 +54,10 @@ def trigger(is_trigger_enabled: bool) -> Trigger:
     baker.make(
         SendEmailAction,
         trigger=trigger,
-        subject='You have uncompleted tasks!',
+        subject="You have uncompleted tasks!",
         message=(
-            'Hey {{ user.first_name|capfirst }},\n'
-            'There are tasks you not completed yet: {{ user.tasks.filter_uncompleted }}.'
+            "Hey {{ user.first_name|capfirst }},\n"
+            "There are tasks you not completed yet: {{ user.tasks.filter_uncompleted }}."
         ),
     )
     return trigger
@@ -77,7 +77,7 @@ def activity(trigger: Trigger, is_reminder_already_sent, user) -> Optional[Activ
     return None
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_reminder(
     is_trigger_enabled: bool,
     is_reminder_already_sent: bool,
@@ -87,7 +87,7 @@ def test_reminder(
     mailoutbox: List[EmailMessage],
 ):
     action_frequency_condition = trigger.conditions.instance_of(ActionFrequencyCondition).first()
-    assert str(action_frequency_condition) == 'action frequency no less than 1 day, 0:00:00'
+    assert str(action_frequency_condition) == "action frequency no less than 1 day, 0:00:00"
     clock()
     run_on_commit()
     if is_trigger_enabled and not is_reminder_already_sent and uncompleted_tasks:

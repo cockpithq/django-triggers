@@ -1,1 +1,1 @@
-default_app_config = 'triggers.apps.DefaultConfig'
+default_app_config = "triggers.apps.DefaultConfig"

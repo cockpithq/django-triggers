@@ -3,6 +3,6 @@ from model_bakery import baker
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture
 def user() -> User:
-    return baker.make(User, first_name='Bob')
+    return baker.make(User, first_name="Bob")

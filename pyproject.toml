@@ -6,8 +6,13 @@ build-backend = "hatchling.build"
 name = "dj-triggers"
 version = "1.0.1"
 description = "A Triggers system for Django made for implementing event-based business logic configurable through the Django admin site."
-authors = [{ name = "Dmitry Kolyagin", email = "dmitry.kolyagin@gmail.com" }]
-requires-python = ">=3.7.2,<4.0"
+authors = [
+    { name = "Dmitry Kolyagin", email = "dmitry.kolyagin@gmail.com" },
+    { name = "Svyatoslav Schurov", email = "jackpotax3@gmail.com" },
+    { name = "Vitaliy Glukhih", email = "vagluxix@gmail.com " },
+    { name = "Alex Yanitskiy", email = "demo.alex@gmail.com" }
+]
+requires-python = ">=3.8,<4.0"
 readme = "README.md"
 license = "BSD-3-Clause"
 keywords = [
@@ -17,6 +22,10 @@ keywords = [
 classifiers = [
     "Framework :: Django :: 3",
     "Framework :: Django :: 4",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development",
 ]
 dependencies = [
     "Django>=3",
@@ -30,32 +39,82 @@ Repository = "https://github.com/cockpithq/django-triggers"
 
 [dependency-groups]
 dev = [
-    "flake8>=5.0.4,<6",
-    "Flake8-pyproject>=1.1.0.post0,<2",
     "mypy~=1.0",
     "django-stubs",
-    "flake8-django>=1.1.5,<2",
     "pytest>=7.1.3,<8",
     "model-bakery>=1.7.0,<2",
     "pytest-django>=4.5.2,<5",
-    "isort>=5.10.1,<6",
     "pytest-cov>=4.0.0,<5",
     "celery-types>=0.14.0,<0.15",
-    "flake8-pytest-style>=1.7.2,<2",
     "setuptools>=68.0.0",
+    "ruff>=0.11.10",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["triggers"]
 
 [tool.hatch.build.targets.sdist]
 include = ["triggers"]
 
-[tool.hatch.build.targets.wheel]
-include = ["triggers"]
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+extend-exclude = ["*/migrations/*.py"]
 
-[tool.flake8]
-max-line-length = 100
-exclude = [
-    "*/migrations/*.py"
+[tool.ruff.lint]
+select = [
+    # Pyflakes
+    "F",
+    # Pycodestyle
+    "E",
+    # isort
+    "I",
+    # flake8-bugbear
+    "B",
+    # flake8-quotes
+    "Q",
+    # flake8-django
+    "DJ",
+    # flake8-pytest-style
+    "PT",
+    # pyupgrade
+    "UP",
+    # C4 from flake8-comprehensions
+    "C4",
+    
+    # Type checking related rules
+    "UP006",   # Use Python 3.9+ style annotations (PEP 585)
+    "UP007",   # Use Python 3.10+ style union annotations (PEP 604)
+    "UP037",   # Remove unnecessary quotes from type annotations
+    "RUF013",  # Detect implicit Optional from default=None
 ]
+
+ignore = [
+    # Allow non-abstract empty methods in abstract base classes
+    "B027",
+    # Allow boolean positional values in function calls, like `dict.get(... True)`
+    "FBT003",
+    # Ignore checks for possible passwords
+    "S105", "S106", "S107",
+    # Ignore complexity
+    "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+]
+
+unfixable = [
+    # Don't touch unused imports
+    "F401",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["triggers"]
+force-sort-within-sections = true
+lines-after-imports = 2
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
 
 [tool.coverage.report]
 exclude_lines = [
@@ -82,15 +141,12 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+filterwarnings = ["ignore::DeprecationWarning"]
 addopts = [
     "--ds=tests.app.settings",
     "--cov=triggers",
     "--cov-report=term-missing:skip-covered"
 ]
-
-[tool.isort]
-force_sort_within_sections = true
-include_trailing_comma = true
-line_length = 100
-multi_line_output = 3
-use_parentheses = true

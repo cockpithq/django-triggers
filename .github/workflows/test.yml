@@ -24,11 +24,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras --dev
 
-      - name: Run flake8
-        run: uv run flake8 triggers tests
-
-      - name: Run isort
-        run: uv run isort --check triggers tests
+      - name: Run ruff check
+        run: uv run ruff check triggers tests
 
       - name: Run mypy
         run: uv run mypy triggers tests
