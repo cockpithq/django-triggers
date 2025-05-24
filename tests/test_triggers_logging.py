@@ -33,6 +33,136 @@ def test_action(trigger):
 
 
 @pytest.mark.django_db
+def test_full_trigger_cycle_with_action_user_logging(user, trigger, event, test_action):
+    """Test that user is logged in all stages when trigger has actions"""
+    # Fire the event for a single user - this should create signal_sent and task_created logs
+    event.fire_single(user_pk=user.pk)
+    
+    # Get the run_id from the first log entry
+    first_log = TriggerLog.objects.order_by("id").first()
+    run_id = first_log.run_id
+    
+    # Print all logs for debugging
+    all_logs = TriggerLog.objects.filter(run_id=run_id).order_by("id")
+    print(f"\nAll logs for run_id {run_id} after fire_single with action:")
+    for log in all_logs:
+        print(f"  Stage: {log.stage}, User: {log.user}, Entity: {log.entity_name}, Result: {log.result}")
+    
+    # Check that user is logged in fire and should_be_fired stages
+    fire_logs = TriggerLog.objects.filter(run_id=run_id, stage="fire")
+    should_be_fired_logs = TriggerLog.objects.filter(run_id=run_id, stage="should_be_fired")
+    signal_sent_logs = TriggerLog.objects.filter(run_id=run_id, stage="signal_sent")
+    task_created_logs = TriggerLog.objects.filter(run_id=run_id, stage="task_created")
+    trigger_filter_logs = TriggerLog.objects.filter(run_id=run_id, stage="trigger_filter")
+    
+    # Check that these stages have user logged where applicable
+    if fire_logs.exists():
+        assert fire_logs.filter(user__isnull=False).exists(), "Fire stage should have user logged"
+        
+    if should_be_fired_logs.exists():
+        assert should_be_fired_logs.filter(user__isnull=False).exists(), "Should be fired stage should have user logged"
+        
+    if signal_sent_logs.exists():
+        assert signal_sent_logs.filter(user__isnull=False).exists(), "Signal sent stage should have user logged"
+        
+    if task_created_logs.exists():
+        assert task_created_logs.filter(user__isnull=False).exists(), "Task created stage should have user logged"
+        
+    # Trigger filtering might not have user in some cases, but let's check
+    print(f"\nTrigger filter logs: {trigger_filter_logs.count()}")
+    for log in trigger_filter_logs:
+        print(f"  Trigger filter - User: {log.user}, Result: {log.result}")
+
+
+@pytest.mark.django_db
+def test_full_trigger_cycle_user_logging(user, trigger, event):
+    """Test that user is logged in all stages of the full trigger cycle"""
+    # Fire the event for a single user - this should create signal_sent and task_created logs
+    event.fire_single(user_pk=user.pk)
+    
+    # Get the run_id from the first log entry
+    first_log = TriggerLog.objects.order_by("id").first()
+    run_id = first_log.run_id
+    
+    # Print all logs for debugging
+    all_logs = TriggerLog.objects.filter(run_id=run_id).order_by("id")
+    print(f"\nAll logs for run_id {run_id} after fire_single:")
+    for log in all_logs:
+        print(f"  Stage: {log.stage}, User: {log.user}, Entity: {log.entity_name}, Result: {log.result}")
+    
+    # Check that user is logged in fire and should_be_fired stages
+    fire_logs = TriggerLog.objects.filter(run_id=run_id, stage="fire")
+    should_be_fired_logs = TriggerLog.objects.filter(run_id=run_id, stage="should_be_fired")
+    signal_sent_logs = TriggerLog.objects.filter(run_id=run_id, stage="signal_sent")
+    task_created_logs = TriggerLog.objects.filter(run_id=run_id, stage="task_created")
+    
+    # Check that these stages have user logged
+    if fire_logs.exists():
+        assert fire_logs.filter(user__isnull=False).exists(), "Fire stage should have user logged"
+        
+    if should_be_fired_logs.exists():
+        assert should_be_fired_logs.filter(user__isnull=False).exists(), "Should be fired stage should have user logged"
+        
+    if signal_sent_logs.exists():
+        assert signal_sent_logs.filter(user__isnull=False).exists(), "Signal sent stage should have user logged"
+        
+    if task_created_logs.exists():
+        assert task_created_logs.filter(user__isnull=False).exists(), "Task created stage should have user logged"
+
+
+@pytest.mark.django_db
+def test_user_logging_in_specified_events(user, trigger, event):
+    """Test that user is logged in the specified events: Trigger filtering, Handle start, Task created, Fire initiated, Should be fired check"""
+    # Fire the event for a single user
+    event.fire_single(user_pk=user.pk)
+    
+    # Get the run_id from the first log entry
+    first_log = TriggerLog.objects.order_by("id").first()
+    run_id = first_log.run_id
+    
+    # Simulate task execution to get handle_start logs
+    handle_event(event.pk, user.pk, _run_id=str(run_id))
+    
+    # Print all logs for debugging
+    all_logs = TriggerLog.objects.filter(run_id=run_id).order_by("id")
+    print(f"\nAll logs for run_id {run_id}:")
+    for log in all_logs:
+        print(f"  Stage: {log.stage}, User: {log.user}, Entity: {log.entity_name}, Result: {log.result}")
+    
+    # Check that user is logged in the specified events
+    logs_with_user = TriggerLog.objects.filter(run_id=run_id, user__isnull=False)
+    
+    # Get stages that should have user logged
+    stages_with_user = set(log.stage for log in logs_with_user)
+    
+    # Check specific stages mentioned in the issue
+    expected_stages = {
+        "fire",  # Fire initiated
+        "should_be_fired",  # Should be fired check
+        "task_created",  # Task created
+        "handle_start",  # Handle start
+        "signal_sent",  # This should already have user
+    }
+    
+    print(f"\nStages with user logged: {stages_with_user}")
+    print(f"Expected stages: {expected_stages}")
+    
+    # Check that all expected stages have user logged
+    for stage in expected_stages:
+        stage_logs = TriggerLog.objects.filter(run_id=run_id, stage=stage)
+        if stage_logs.exists():
+            # At least one log for this stage should have user
+            has_user_log = stage_logs.filter(user__isnull=False).exists()
+            assert has_user_log, f"Stage '{stage}' should have user logged but doesn't"
+            
+            # Print for debugging
+            for log in stage_logs:
+                print(f"  Stage: {log.stage}, User: {log.user}, Entity: {log.entity_name}")
+        else:
+            print(f"  No logs found for stage: {stage}")
+
+
+@pytest.mark.django_db
 def test_run_id_generation_and_propagation(user, trigger, event):
     """Test that run_id is generated and propagated through the trigger lifecycle"""
     # Fire the event

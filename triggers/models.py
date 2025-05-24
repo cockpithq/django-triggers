@@ -234,11 +234,17 @@ class Event(PolymorphicModel):
         return user_context
 
     def fire(self, user_queryset: models.QuerySet, **kwargs) -> None:
+        # Попытаемся определить пользователя из queryset для логирования
+        user_for_logging = None
+        if user_queryset.count() == 1:
+            user_for_logging = user_queryset.first()
+        
         run_id = log_trigger_event(
             entity=self, 
             entity_type="event",
             stage="fire",
-            details={"kwargs": str(kwargs)}
+            user=user_for_logging,
+            details={"kwargs": str(kwargs), "user_count": user_queryset.count()}
         )
         
         should_fire = self.should_be_fired(**kwargs)
@@ -246,6 +252,7 @@ class Event(PolymorphicModel):
             entity=self, 
             entity_type="event",
             stage="should_be_fired",
+            user=user_for_logging,
             result=should_fire,
             details={"kwargs": str(kwargs)},
             run_id=run_id
