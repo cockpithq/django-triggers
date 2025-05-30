@@ -4,17 +4,17 @@ Django-Temporal integration hooks for trigger events.
 This module connects Django signal handlers with Temporal workflow execution.
 """
 
+from datetime import timedelta
 import logging
 from typing import Any
 
 from asgiref.sync import async_to_sync
-from django.dispatch import receiver, Signal
+from django.dispatch import Signal, receiver
 from django.utils.module_loading import import_string
-from datetime import timedelta
 from temporalio.common import RetryPolicy
 
-from triggers.models import Event
 from triggers import settings as triggers_settings
+from triggers.models import Event
 from triggers.temporal.client import get_temporal_client
 
 

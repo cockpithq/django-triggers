@@ -13,13 +13,15 @@ To run this script:
 4. Submit a test form: `python examples/medical_appointment_cli.py submit`
 """
 
-import os
-import sys
+import argparse
 import asyncio
 import logging
-import django
-import argparse
+import os
+import sys
+
 from asgiref.sync import sync_to_async
+import django
+
 
 # Configure logging
 logging.basicConfig(
@@ -35,10 +37,11 @@ django.setup()
 
 # Now we can import Django models
 from django.contrib.auth.models import User
+
 from examples.models import (
+    HighBMICondition,
     MedicalForm,
     MedicalFormSubmittedEvent,
-    HighBMICondition,
     ScheduleDoctorAppointmentAction,
 )
 from triggers.models import Trigger

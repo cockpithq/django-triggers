@@ -19,21 +19,21 @@ class Task(models.Model):
     user = models.ForeignKey(
         to=User,
         on_delete=models.CASCADE,
-        verbose_name=_('user'),
-        related_name='tasks',
-        related_query_name='task',
+        verbose_name=_("user"),
+        related_name="tasks",
+        related_query_name="task",
     )
-    name = models.CharField(_('name'), max_length=128)
-    is_completed = models.BooleanField(_('completed'), default=False, db_index=True)
-    is_important = models.BooleanField(_('important'), default=False)
+    name = models.CharField(_("name"), max_length=128)
+    is_completed = models.BooleanField(_("completed"), default=False, db_index=True)
+    is_important = models.BooleanField(_("important"), default=False)
 
     completed = Signal()
 
     objects = TaskQuerySet.as_manager()  # type: ignore[django-manager-missing]
 
     class Meta:
-        verbose_name = _('task')
-        verbose_name_plural = _('tasks')
+        verbose_name = _("task")
+        verbose_name_plural = _("tasks")
 
     def __str__(self):
         return self.name
@@ -46,25 +46,25 @@ class Task(models.Model):
 
 
 class TaskCompletedEvent(Event):  # type: ignore[django-manager-missing]
-    important_only = models.BooleanField(_('important only'), default=False)
+    important_only = models.BooleanField(_("important only"), default=False)
 
     class Meta(Event.Meta):
-        verbose_name = _('task completed')
+        verbose_name = _("task completed")
 
     def __str__(self):
         if self.important_only:
-            return f'important {super().__str__()}'
+            return f"important {super().__str__()}"
         return super().__str__()
 
     def should_be_fired(self, **kwargs) -> bool:
         if self.important_only:
-            return Task.objects.filter(id=kwargs['task_id'], is_important=True).exists()
+            return Task.objects.filter(id=kwargs["task_id"], is_important=True).exists()
         return True
 
     def get_user_context(self, user, context) -> Dict[str, Any]:
         user_context = super().get_user_context(user, context)
-        task: Task = Task.objects.get(id=context['task_id'])
-        user_context.update({'task': task})
+        task: Task = Task.objects.get(id=context["task_id"])
+        user_context.update({"task": task})
         return user_context
 
 
@@ -87,10 +87,10 @@ class HasUncompletedTaskCondition(Condition):  # type: ignore[django-manager-mis
 
 
 class SendEmailAction(Action):  # type: ignore[django-manager-missing]
-    subject = models.CharField(_('subject'), max_length=256)
+    subject = models.CharField(_("subject"), max_length=256)
     message = models.TextField(
-        verbose_name=_('message'),
-        help_text=_('You can use the Django template language.'),
+        verbose_name=_("message"),
+        help_text=_("You can use the Django template language."),
     )
 
     def perform(self, user: User, context: Dict[str, Any]):

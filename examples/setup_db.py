@@ -4,19 +4,23 @@ Script to set up the database for the medical form workflow example.
 """
 
 import os
+
 import django
+
 
 # Set up Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
 django.setup()
 
 from django.contrib.auth.models import User
-from triggers.models import Trigger
+
 from examples.models import (
-    MedicalFormSubmittedEvent,
     HighBMICondition,
+    MedicalFormSubmittedEvent,
     ScheduleDoctorAppointmentAction,
 )
+from triggers.models import Trigger
+
 
 # Create test user
 user, created = User.objects.get_or_create(

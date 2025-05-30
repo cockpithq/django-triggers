@@ -12,10 +12,10 @@ from triggers import settings as triggers_settings
 from triggers.temporal.client import get_temporal_client
 from triggers.temporal.workflows import (
     TriggerWorkflow,
-    fetch_trigger_definition,
     evaluate_condition,
-    perform_action,
+    fetch_trigger_definition,
     log_activity,
+    perform_action,
 )
 
 

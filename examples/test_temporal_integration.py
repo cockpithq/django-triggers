@@ -14,13 +14,15 @@ To run this example:
 4. Run this script: `python examples/test_temporal_integration.py`
 """
 
-import os
-import sys
 import asyncio
 import logging
+import os
+import sys
+
+from asgiref.sync import sync_to_async
 import django
 from django.contrib.auth import get_user_model
-from asgiref.sync import sync_to_async
+
 
 # Configure logging
 logging.basicConfig(
@@ -35,8 +37,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
 django.setup()
 
 # Import django-triggers components
-from triggers.models import Trigger, Event
 from triggers import settings as triggers_settings
+from triggers.models import Event, Trigger
 from triggers.temporal.client import get_temporal_client
 
 

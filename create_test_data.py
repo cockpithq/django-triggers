@@ -6,16 +6,20 @@ This script creates a test trigger and event in the database if none exist.
 """
 
 import os
+
 import django
+
 
 # Set up Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
 django.setup()
 
 from django.contrib.auth.models import User
-from triggers.models import Trigger, Event
-from tests.app.models import ClockEvent
 from model_bakery import baker
+
+from tests.app.models import ClockEvent
+from triggers.models import Event, Trigger
+
 
 # Create a user if none exists
 if User.objects.count() == 0:

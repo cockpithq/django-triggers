@@ -8,14 +8,16 @@ To run this script:
 2. Run this script: `python examples/simplified_test.py`
 """
 
-import sys
 import asyncio
-import logging
-import uuid
 from datetime import timedelta
-from temporalio import workflow, activity
+import logging
+import sys
+import uuid
+
+from temporalio import activity, workflow
 from temporalio.client import Client
 from temporalio.worker import Worker
+
 
 # Configure logging
 logging.basicConfig(

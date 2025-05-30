@@ -6,17 +6,19 @@ This script helps to diagnose issues with Temporal worker configuration
 by validating workflows and printing detailed diagnostic information.
 """
 
+import asyncio
+import inspect
+import logging
 import os
 import sys
-import asyncio
-import logging
 import traceback
-import inspect
+
 
 # Set up Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
 
 import django
+
 
 django.setup()
 
@@ -29,17 +31,18 @@ logging.basicConfig(
 logger = logging.getLogger("temporal-validator")
 
 # Import components
-from temporalio.worker import Worker
-from temporalio.client import Client
 import temporalio
+from temporalio.client import Client
+from temporalio.worker import Worker
 import temporalio.workflow
+
 from triggers import settings as triggers_settings
 from triggers.temporal.workflows import (
     TriggerWorkflow,
-    fetch_trigger_definition,
     evaluate_condition,
-    perform_action,
+    fetch_trigger_definition,
     log_activity,
+    perform_action,
 )
 
 

@@ -6,6 +6,7 @@ These settings can be overridden in the project's settings.py file.
 
 from django.conf import settings
 
+
 # Whether to use Temporal for trigger processing
 TRIGGERS_USE_TEMPORAL = getattr(settings, "TRIGGERS_USE_TEMPORAL", False)
 

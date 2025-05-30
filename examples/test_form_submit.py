@@ -11,10 +11,11 @@ Usage:
     python examples/test_form_submit.py
 """
 
-import os
-import sys
 import asyncio
 import logging
+import os
+import sys
+
 
 # Configure logging
 logging.basicConfig(
@@ -37,12 +38,14 @@ logger = logging.getLogger(__name__)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
 import django
 
+
 django.setup()
 
-from django.contrib.auth.models import User
 from asgiref.sync import sync_to_async
-from triggers.models import Trigger
+from django.contrib.auth.models import User
+
 from examples.models import MedicalForm, MedicalFormSubmittedEvent
+from triggers.models import Trigger
 
 
 async def setup_test():

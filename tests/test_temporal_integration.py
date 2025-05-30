@@ -1,22 +1,22 @@
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-
+from model_bakery import baker
+import pytest
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from triggers.models import Trigger, Event
+from tests.app.models import ClockEvent
+from triggers.models import Event, Trigger
+from triggers.temporal.hooks import on_event_fired
 from triggers.temporal.workflows import (
     TriggerWorkflow,
-    fetch_trigger_definition,
     evaluate_condition,
-    perform_action,
+    fetch_trigger_definition,
     log_activity,
+    perform_action,
 )
-from triggers.temporal.hooks import on_event_fired
-from tests.app.models import ClockEvent
-from model_bakery import baker
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ async def workflow_environment():
 @pytest.fixture
 async def client(workflow_environment):
     """Fixture to provide a Temporal client connected to the test environment."""
-    yield workflow_environment.client
+    return workflow_environment.client
 
 
 @pytest.fixture

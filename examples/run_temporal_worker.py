@@ -12,11 +12,13 @@ To run this script:
 4. Run this script: `python examples/run_temporal_worker.py`
 """
 
-import os
-import sys
 import asyncio
 import logging
+import os
+import sys
+
 import django
+
 
 # Configure logging first
 logging.basicConfig(
@@ -41,8 +43,9 @@ django.setup()
 
 # Now import django-triggers components
 try:
-    from triggers import settings as triggers_settings
     from temporalio.worker import Worker
+
+    from triggers import settings as triggers_settings
     from triggers.temporal.client import get_temporal_client
 
     # Import from isolated workflow that doesn't have Django imports
@@ -50,10 +53,10 @@ try:
 
     # Import activities from the Django-aware module
     from triggers.temporal.workflows import (
-        fetch_trigger_definition,
         evaluate_condition,
-        perform_action,
+        fetch_trigger_definition,
         log_activity,
+        perform_action,
     )
 except ImportError as e:
     logger.error(f"Error importing required modules: {e}")

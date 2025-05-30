@@ -4,18 +4,21 @@ Simple script to check what's in the database.
 """
 
 import os
+
 import django
+
 
 # Set up Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.app.settings")
 django.setup()
 
-from triggers.models import Trigger, Event, Condition, Action
 from examples.models import (
-    MedicalFormSubmittedEvent,
     HighBMICondition,
+    MedicalFormSubmittedEvent,
     ScheduleDoctorAppointmentAction,
 )
+from triggers.models import Action, Condition, Event, Trigger
+
 
 print("=== Triggers ===")
 for trigger in Trigger.objects.all():

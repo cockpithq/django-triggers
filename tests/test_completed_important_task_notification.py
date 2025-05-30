@@ -25,14 +25,14 @@ def is_task_important(request) -> bool:
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def user() -> User:
-    return baker.make(User, first_name='Bob', email='bob@example.com')
+    return baker.make(User, first_name="Bob", email="bob@example.com")
 
 
 @pytest.fixture(autouse=True)
 def trigger(is_trigger_enabled: bool) -> Trigger:
-    trigger = baker.make(Trigger, is_enabled=is_trigger_enabled, name='Important Task Completed')
+    trigger = baker.make(Trigger, is_enabled=is_trigger_enabled, name="Important Task Completed")
     # Add a TaskCompletedEvent configured to be fired for important tasks only
     baker.make(TaskCompletedEvent, trigger=trigger, important_only=True)
     # In order to notify the user once only,
@@ -41,11 +41,11 @@ def trigger(is_trigger_enabled: bool) -> Trigger:
     baker.make(
         SendEmailAction,
         trigger=trigger,
-        subject='Your First Important Task Completed!',
+        subject="Your First Important Task Completed!",
         message=(
             'Hey {{ user.first_name|capfirst }},\n'
             'You just completed your first important task "{{ task.name }}". \n',
-            'Keep it that way!'
+            "Keep it that way!"
         ),
     )
     return trigger
@@ -58,7 +58,7 @@ def activity(trigger: Trigger, is_notification_already_sent, user) -> Optional[A
     return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def task(user: User, is_task_important: bool) -> Task:
     return baker.make(Task, user=user, is_important=is_task_important)
 
@@ -67,7 +67,7 @@ def _get_action_count(user: User) -> int:
     return sum([activity.action_count for activity in user.trigger_activities.all()])
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_notification(
     is_trigger_enabled: bool,
     is_notification_already_sent: bool,
@@ -77,10 +77,10 @@ def test_notification(
     trigger: Trigger,
     mailoutbox: List[EmailMessage],
 ):
-    assert str(trigger) == 'Important Task Completed'
-    assert str(trigger.events.first()) == 'important task completed'
-    assert str(trigger.actions.first()) == 'send email action'
-    assert str(trigger.conditions.first()) == 'action count no more than 1'
+    assert str(trigger) == "Important Task Completed"
+    assert str(trigger.events.first()) == "important task completed"
+    assert str(trigger.actions.first()) == "send email action"
+    assert str(trigger.conditions.first()) == "action count no more than 1"
     initial_action_count = _get_action_count(user)
     task.complete()
     run_on_commit()

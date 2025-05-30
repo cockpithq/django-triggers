@@ -15,6 +15,7 @@ import asyncio
 import logging
 import os
 import sys
+
 import django
 
 
@@ -33,15 +34,16 @@ async def run_worker(task_queue=None, debug=False):
         debug: Whether to enable debug logging
     """
     # Import here after Django is set up
-    from triggers import settings as triggers_settings
     from temporalio.worker import Worker
+
+    from triggers import settings as triggers_settings
     from triggers.temporal.client import get_temporal_client
     from triggers.temporal.workflows import (
         TriggerWorkflow,
-        fetch_trigger_definition,
         evaluate_condition,
-        perform_action,
+        fetch_trigger_definition,
         log_activity,
+        perform_action,
     )
 
     # Check if Temporal integration is enabled

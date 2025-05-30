@@ -10,11 +10,10 @@ import datetime
 import logging
 from typing import Any, Dict, List, Optional
 
-from temporalio import workflow, activity
 from asgiref.sync import sync_to_async
-
-from django.conf import settings as django_settings
 from django.apps import apps
+from django.conf import settings as django_settings
+from temporalio import activity, workflow
 
 
 User = django_settings.AUTH_USER_MODEL  # type: ignore

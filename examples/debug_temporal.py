@@ -5,14 +5,16 @@ Debug script to directly test Temporal workflow execution.
 This script bypasses the Django signal system and directly invokes the Temporal workflow.
 """
 
+import asyncio
+from datetime import timedelta
+import logging
 import os
 import sys
-import asyncio
-import logging
-import django
+
 from asgiref.sync import sync_to_async
-from datetime import timedelta
+import django
 from temporalio.common import RetryPolicy
+
 
 # Configure logging
 logging.basicConfig(
@@ -28,8 +30,9 @@ django.setup()
 
 # Import Django models and Temporal client
 from django.contrib.auth import get_user_model
-from triggers.models import Trigger, Event
+
 from triggers import settings as triggers_settings
+from triggers.models import Event, Trigger
 from triggers.temporal.client import get_temporal_client
 
 

@@ -5,10 +5,12 @@ Debugging script to test the Temporal hooks.
 This script verifies that the Temporal hooks are properly connected to Django signals.
 """
 
+import logging
 import os
 import sys
+
 import django
-import logging
+
 
 # Configure logging
 logging.basicConfig(
@@ -24,9 +26,10 @@ django.setup()
 
 # Import Django models
 from django.contrib.auth import get_user_model
-from triggers.models import Trigger, Event
-from triggers.temporal.hooks import on_event_fired
+
 from triggers import settings as triggers_settings
+from triggers.models import Event, Trigger
+from triggers.temporal.hooks import on_event_fired
 
 
 def main():

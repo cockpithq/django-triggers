@@ -3,8 +3,8 @@ from django.utils.translation import gettext_lazy as _
 
 
 class BillingConfig(AppConfig):
-    name = 'tests.app'
-    verbose_name = _('Test app')
+    name = "tests.app"
+    verbose_name = _("Test app")
 
     def ready(self):
         # Initialize Celery app

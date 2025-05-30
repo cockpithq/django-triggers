@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "generatedAt": "2025-05-20T13:33:39.770Z",
+    "tasksAnalyzed": 16,
+    "thresholdScore": 5,
+    "projectName": "Taskmaster",
+    "usedResearch": false
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 1,
+      "taskTitle": "Analyze Current Linting Configuration",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the analysis of current linting configuration into specific subtasks for each tool (flake8, isort, mypy) and a final subtask for creating the mapping document between current tools and Ruff equivalents.",
+      "reasoning": "This task requires detailed analysis of multiple tools with different configuration formats. The complexity comes from needing to understand all current settings and creating a comprehensive mapping document."
+    },
+    {
+      "taskId": 2,
+      "taskTitle": "Add Ruff Dependencies to Project",
+      "complexityScore": 3,
+      "recommendedSubtasks": 2,
+      "expansionPrompt": "Divide this task into researching the appropriate Ruff version and dependencies, then implementing the actual installation and verification steps.",
+      "reasoning": "This is a relatively straightforward dependency addition task with clear steps, though it requires some research to determine the correct version and compatibility."
+    },
+    {
+      "taskId": 3,
+      "taskTitle": "Configure Ruff Linting Rules",
+      "complexityScore": 8,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the Ruff linting configuration into subtasks for basic setup, rule mapping, special configurations (like per-file-ignores), testing equivalence with flake8, and documentation of differences.",
+      "reasoning": "High complexity due to the detailed mapping required between flake8 and Ruff rules, ensuring equivalent coverage, and handling edge cases. This requires deep understanding of both tools."
+    },
+    {
+      "taskId": 4,
+      "taskTitle": "Configure Ruff Formatter",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide the formatter configuration into analyzing current isort settings, configuring Ruff formatter settings, testing on representative code samples, and documenting differences between tools.",
+      "reasoning": "Formatting configuration requires careful attention to maintain consistency with existing code style while transitioning to a new tool. Testing and validation are critical to minimize disruption."
+    },
+    {
+      "taskId": 5,
+      "taskTitle": "Research Ty Type Checker",
+      "complexityScore": 5,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Break down the Ty research into subtasks for general capability assessment, Django compatibility investigation, and comparison with mypy features.",
+      "reasoning": "This is primarily a research task requiring investigation of a newer tool. The complexity comes from needing to thoroughly understand Ty's capabilities and limitations, especially regarding Django compatibility."
+    },
+    {
+      "taskId": 6,
+      "taskTitle": "Evaluate Ruff Type Checking Capabilities",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide this evaluation into researching Ruff's type checking rules, comparing with mypy features, testing on sample code, and documenting findings and recommendations.",
+      "reasoning": "This task requires deep understanding of type checking concepts and detailed comparison between tools. The evaluation needs to be thorough to make informed decisions about tool replacement."
+    },
+    {
+      "taskId": 7,
+      "taskTitle": "Add Ty to Development Dependencies",
+      "complexityScore": 3,
+      "recommendedSubtasks": 2,
+      "expansionPrompt": "Split this task into researching the appropriate Ty version and dependencies, then implementing the installation and verification steps.",
+      "reasoning": "Similar to adding Ruff, this is a straightforward dependency addition with clear steps, though it requires confirming the correct version and any additional dependencies."
+    },
+    {
+      "taskId": 8,
+      "taskTitle": "Configure Ty Type Checking",
+      "complexityScore": 9,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down Ty configuration into translating mypy settings, configuring Django support, testing with Django-specific code patterns, addressing compatibility issues, and documenting the final configuration.",
+      "reasoning": "This is one of the most complex tasks due to the need to configure a newer type checker to work with Django, potentially without established stubs. Requires deep understanding of type checking and Django internals."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "Update CI Configuration for New Tools",
+      "complexityScore": 6,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Divide the CI update into analyzing current CI workflow, implementing changes for new tools, and testing the updated workflow.",
+      "reasoning": "Updating CI requires careful attention to ensure builds don't break. The complexity comes from ensuring proper integration of multiple new tools while maintaining reliability."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "Run Full Codebase Tests with New Tools",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the full codebase testing into separate subtasks for Ruff linting, Ruff formatting, Ty type checking, and comparative analysis with previous tools.",
+      "reasoning": "This task involves running multiple tools across the entire codebase and performing detailed comparison of results. The complexity comes from the volume of data to analyze and the need to refine configurations based on findings."
+    },
+    {
+      "taskId": 11,
+      "taskTitle": "Create Migration Guide for Developers",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide the documentation task into sections for installation guide, command reference, IDE integration, and troubleshooting/common issues.",
+      "reasoning": "Creating comprehensive documentation requires covering multiple tools and scenarios. The complexity comes from ensuring the guide is clear, complete, and addresses all developer workflows."
+    },
+    {
+      "taskId": 12,
+      "taskTitle": "Remove Old Linting and Type Checking Dependencies",
+      "complexityScore": 4,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Break down the dependency removal into updating pyproject.toml, cleaning up configuration files, and verifying the project builds correctly without old dependencies.",
+      "reasoning": "While conceptually simple, this task requires careful verification to ensure nothing breaks when removing dependencies. The risk of disruption adds complexity."
+    },
+    {
+      "taskId": 13,
+      "taskTitle": "Implement Pre-commit Hooks for New Tools",
+      "complexityScore": 5,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Divide the pre-commit implementation into configuring hooks for each tool, testing hook performance, and documenting usage for developers.",
+      "reasoning": "Setting up pre-commit hooks requires balancing thoroughness with performance. The complexity comes from ensuring hooks catch issues without becoming too slow or disruptive."
+    },
+    {
+      "taskId": 14,
+      "taskTitle": "Create IDE Integration Configurations",
+      "complexityScore": 5,
+      "recommendedSubtasks": 3,
+      "expansionPrompt": "Break down IDE integration into creating configurations for VSCode, PyCharm, and documenting setup for other IDEs.",
+      "reasoning": "This task requires knowledge of multiple IDEs and their extension systems. The complexity comes from ensuring consistent behavior across different development environments."
+    },
+    {
+      "taskId": 15,
+      "taskTitle": "Optimize Tool Performance",
+      "complexityScore": 7,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Divide performance optimization into benchmarking current performance, identifying bottlenecks, implementing optimizations, and verifying improvements.",
+      "reasoning": "Performance optimization requires detailed analysis and experimentation. The complexity comes from understanding tool internals and finding the right balance of thoroughness and speed."
+    },
+    {
+      "taskId": 16,
+      "taskTitle": "Update PROGRESS.md with Migration Details",
+      "complexityScore": 3,
+      "recommendedSubtasks": 2,
+      "expansionPrompt": "Split this task into gathering metrics and information about the migration, then writing and formatting the actual PROGRESS.md entry.",
+      "reasoning": "This is primarily a documentation task with clear requirements. The complexity is relatively low, though it requires gathering comprehensive information about the migration process."
+    }
+  ]
+}

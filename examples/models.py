@@ -1,15 +1,16 @@
 """Medical form models."""
 
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils.translation import gettext_lazy as _
 import datetime
-from django.utils import timezone
-from django.template import Template, Context
-from django.dispatch import receiver, Signal
 import logging
 
-from triggers.models import Event, Condition, Action
+from django.contrib.auth.models import User
+from django.db import models
+from django.dispatch import Signal, receiver
+from django.template import Context, Template
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
+from triggers.models import Action, Condition, Event
 
 
 class MedicalForm(models.Model):
