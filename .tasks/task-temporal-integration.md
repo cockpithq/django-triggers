@@ -15,8 +15,7 @@ MEMO: This migration can be done incrementally, running both Celery and Temporal
 1. [ ] Install Temporal.io SDK dependencies
 
    ```sh
-   uv add temporalio asgiref
-   uv sync
+   pip install dj-triggers[temporal]
    ```
 
 2. [ ] Create Temporal client adapter

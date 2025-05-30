@@ -8,7 +8,16 @@
 
 ## Install
 
+Pick the backend you want to use:
+
 ```shell
+# Celery based execution
+pip install dj-triggers[celery]
+
+# Temporal based execution
+pip install dj-triggers[temporal]
+
+# Or install the base package if you'll run triggers manually
 pip install dj-triggers
 ```
 
@@ -23,7 +32,8 @@ INSTALLED_APPS = [
 
 ### Prerequisites
 
-Celery is required to be setup in your project.
+Set up the backend you installed. Configure Celery or Temporal, or provide your
+own mechanism for running `triggers.tasks.handle_event`.
 
 ## Quickstart
 
@@ -171,15 +181,10 @@ Starting with version 1.1.0, django-triggers supports using [Temporal](https://t
 
 ### Setup
 
-1. Install the required dependencies:
+1. Install the Temporal dependencies:
 
 ```shell
-# Using uv
-uv add temporalio asgiref
-uv sync
-
-# Or with pip
-pip install temporalio asgiref
+pip install dj-triggers[temporal]
 ```
 
 2. Enable Temporal integration in your Django settings:

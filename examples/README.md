@@ -11,15 +11,10 @@ brew install temporal
 temporal server start-dev
 ```
 
-2. Install the required dependencies:
+2. Install the Temporal dependencies:
 
 ```sh
-# Using uv
-uv add temporalio asgiref
-uv sync
-
-# Or with pip
-pip install temporalio asgiref
+pip install dj-triggers[temporal]
 ```
 
 3. Configure the integration in your Django settings:
