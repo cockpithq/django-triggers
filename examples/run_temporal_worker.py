@@ -7,7 +7,7 @@ for the django-triggers system.
 
 To run this script:
 1. Make sure you have a Temporal server running (see README.md)
-2. Install the dependencies: `uv add temporalio asgiref`
+2. Install the dependencies: `pip install dj-triggers[temporal]`
 3. Set DJANGO_SETTINGS_MODULE to point to your Django settings
 4. Run this script: `python examples/run_temporal_worker.py`
 """

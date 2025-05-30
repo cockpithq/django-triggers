@@ -33,8 +33,12 @@ classifiers = [
 dependencies = [
     "Django>=3",
     "django-polymorphic>=3,<4",
-    "celery>=4.4",
     "django-more-admin-filters>=1.7",
+]
+
+[project.optional-dependencies]
+celery = ["celery>=4.4"]
+temporal = [
     "temporalio>=1.11.1",
     "asgiref>=3.6.0",
 ]
