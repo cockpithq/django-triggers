@@ -119,31 +119,50 @@ You may also trigger it manually from the Django admin site if you're checking t
 ### Run a django-admin command, e.g. `makemigrations`
 
 ```shell
-poetry run python -m django makemigrations --settings=tests.app.settings
+uv venv
+uv pip install -e .
+python -m django makemigrations --settings=tests.app.settings
 ```
 
 ### Run isort
 
 ```shell
-poetry run isort triggers tests
+uv pip install isort
+isort triggers tests
 ```
 
 ### Run flake8
 
 ```shell
-poetry run flake8 triggers tests
+uv pip install flake8
+flake8 triggers tests
 ```
 
 ### Run mypy
 
 ```shell
-poetry run mypy triggers tests
+uv pip install mypy
+mypy triggers tests
 ```
 
 ### Run pytest
 
 ```shell
-poetry run pytest
+uv pip install pytest pytest-django
+pytest
+```
+
+### Quick setup for development
+
+```shell
+# Create and activate virtual environment
+uv venv && source .venv/bin/activate
+
+# Install all dependencies at once
+uv pip install -e ".[dev]"
+
+# Sync dependencies from pyproject.toml
+uv sync
 ```
 
 ## Temporal Integration

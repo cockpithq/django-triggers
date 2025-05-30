@@ -1,24 +1,26 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "dj-triggers"
 version = "1.1.0"
 description = """
 A Triggers system for Django made for implementing event-based \
 business logic configurable through the Django admin site."""
-license = "BSD-3-Clause"
-authors = [
-    "Dmitry Kolyagin <dmitry.kolyagin@gmail.com>"
-]
+version = "1.0.1"
+description = "A Triggers system for Django made for implementing event-based business logic configurable through the Django admin site."
+authors = [{ name = "Dmitry Kolyagin", email = "dmitry.kolyagin@gmail.com" }]
+requires-python = ">=3.7.2,<4.0"
 readme = "README.md"
-packages = [{include = "triggers"}]
-repository = "https://github.com/cockpithq/django-triggers"
-keywords = ["django", "triggers"]
+license = "BSD-3-Clause"
+keywords = [
+    "django",
+    "triggers",
+]
 classifiers = [
     "Framework :: Django :: 3",
-    "Framework :: Django :: 4"
+    "Framework :: Django :: 4",
 ]
 
 [project]
@@ -40,6 +42,12 @@ Django = ">=3"
 django-polymorphic = "^3"
 celery = ">=4.4"
 django-more-admin-filters = "^1.7"
+dependencies = [
+    "Django>=3",
+    "django-polymorphic>=3,<4",
+    "celery>=4.4",
+    "django-more-admin-filters~=1.7",
+]
 
 [project.optional-dependencies]
 temporal = [
@@ -62,6 +70,31 @@ dev = [
     "celery-types>=0.14.0,<0.15",
     "flake8-pytest-style>=1.7.2,<2",
 ]
+[project.urls]
+Repository = "https://github.com/cockpithq/django-triggers"
+
+[dependency-groups]
+dev = [
+    "flake8>=5.0.4,<6",
+    "Flake8-pyproject>=1.1.0.post0,<2",
+    "mypy~=1.0",
+    "django-stubs",
+    "flake8-django>=1.1.5,<2",
+    "pytest>=7.1.3,<8",
+    "model-bakery>=1.7.0,<2",
+    "pytest-django>=4.5.2,<5",
+    "isort>=5.10.1,<6",
+    "pytest-cov>=4.0.0,<5",
+    "celery-types>=0.14.0,<0.15",
+    "flake8-pytest-style>=1.7.2,<2",
+    "setuptools>=68.0.0",
+]
+
+[tool.hatch.build.targets.sdist]
+include = ["triggers"]
+
+[tool.hatch.build.targets.wheel]
+include = ["triggers"]
 
 [tool.flake8]
 max-line-length = 100
@@ -72,6 +105,11 @@ exclude = [
 [tool.coverage.report]
 exclude_lines = [
   "raise NotImplementedError"
+]
+
+[tool.coverage.run]
+omit = [
+  "*/admin.py"
 ]
 
 [tool.django-stubs]
