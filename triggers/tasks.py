@@ -2,7 +2,8 @@ from celery import shared_task
 from django.dispatch import Signal, receiver
 from django.contrib.auth import get_user_model
 
-from triggers.models import Event, log_trigger_event
+from triggers.models import Event
+from triggers.log import log_trigger_event
 
 User = get_user_model()
 

@@ -17,9 +17,13 @@ INSTALLED_APPS = [
     ...
     "polymorphic",
     "triggers",
+    # Optional logging extension
+    "triggers.contrib.logging",
     ...
 ]
 ```
+
+`triggers.contrib.logging` adds database logging and an admin interface for trigger execution logs. Include it only if you need detailed history.
 
 ### Prerequisites
 

@@ -1,8 +1,6 @@
 from contextlib import contextmanager
 import datetime
-import importlib
 from typing import Any, Dict, Generator, Mapping, Type
-import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,6 +11,8 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
+
+from triggers.log import log_trigger_event
 
 
 User = get_user_model()
@@ -361,162 +361,4 @@ class ActionFrequencyCondition(Condition):  # type: ignore[django-manager-missin
         )
 
 
-class TriggerLog(models.Model):
-    """
-    Logging of all trigger processing stages
-    
-    This model stores information about every step in the trigger processing pipeline,
-    allowing for complete visualization and debugging of the trigger execution flow.
-    
-    Stages in the trigger execution flow:
-    
-    1. Event triggered:
-       * 'fire' - Initial event firing
-       * 'should_be_fired' - Check if the event should be processed
-    
-    2. User filtering:
-       * 'trigger_filter' - Trigger-level filtering of users
-       * 'condition_filter' - Individual condition filtering
-    
-    3. Signal sending:
-       * 'signal_sent' - Signal sent for a specific user
-       * 'task_created' - Celery task created to handle the event
-    
-    4. Event handling:
-       * 'handle_start' - Event handling begins
-       * 'condition_check' - Individual condition satisfaction check for a specific user
-       * 'action_perform' - Action execution
-       
-    The 'run_id' field connects all log entries from a single trigger execution,
-    making it possible to trace the complete processing path from event firing to action execution.
-    """
-    
-    ENTITY_TYPES = [
-        ("event", _("Event")),
-        ("trigger", _("Trigger")),
-        ("condition", _("Condition")), 
-        ("action", _("Action")),
-    ]
-    
-    STAGES = [
-        ("fire", _("Fire initiated")),
-        ("should_be_fired", _("Should be fired check")),
-        ("trigger_filter", _("Trigger filtering")),
-        ("condition_filter", _("Condition filtering")),
-        ("signal_sent", _("Signal sent")),
-        ("task_created", _("Task created")),
-        ("handle_start", _("Handle start")),
-        ("condition_check", _("Condition satisfied check")),
-        ("action_perform", _("Action perform")),
-    ]
-    
-    timestamp = models.DateTimeField(_("timestamp"), auto_now_add=True)
-    run_id = models.UUIDField(_("run ID"), db_index=True, help_text=_("Trigger execution identifier"))
-    entity_type = models.CharField(_("entity type"), max_length=20, choices=ENTITY_TYPES)
-    entity_id = models.PositiveIntegerField(_("entity ID"))
-    entity_class_path = models.CharField(_("entity class path"), max_length=255)
-    entity_name = models.CharField(_("entity name"), max_length=255, blank=True)
-    trigger = models.ForeignKey(
-        Trigger, 
-        on_delete=models.CASCADE, 
-        related_name="logs",
-        verbose_name=_("trigger")
-    )
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="trigger_logs",
-        null=True, blank=True,
-        verbose_name=_("user")
-    )
-    stage = models.CharField(_("stage"), max_length=30, choices=STAGES)
-    result = models.BooleanField(_("result"), null=True, blank=True)
-    details = JSONField(_("details"), blank=True, null=True, default=dict)
-    
-    class Meta:
-        verbose_name = _("trigger log")
-        verbose_name_plural = _("trigger logs")
-        ordering = ["-timestamp"]
-        
-    def __str__(self):
-        return f"{self.get_stage_display()} - {self.entity_name} ({self.timestamp.strftime('%Y-%m-%d %H:%M:%S')})"
 
-    def get_entity_object(self):
-        """
-        Returns the entity object using the stored class path and ID
-        """
-        try:
-            # Split path into module and class name
-            module_path, class_name = self.entity_class_path.rsplit(".", 1)
-            
-            # Import module and get class
-            module = importlib.import_module(module_path)
-            entity_class = getattr(module, class_name)
-            
-            # Return the object
-            return entity_class.objects.get(pk=self.entity_id)
-        except (ImportError, AttributeError, ValueError):
-            return None
-        except models.ObjectDoesNotExist:
-            # Object has been deleted
-            return None
-
-
-def log_trigger_event(entity, entity_type, stage, trigger=None, user=None, result=None, details=None, run_id=None):
-    """
-    Log a trigger event
-    
-    :param entity: Entity object (Event, Trigger, Condition, Action)
-    :param entity_type: Entity type ('event', 'trigger', 'condition', 'action')
-    :param stage: Processing stage
-    :param trigger: Trigger (if not contained in entity)
-    :param user: User (if applicable)
-    :param result: Operation result
-    :param details: Additional details (dictionary)
-    :param run_id: Execution identifier. If not specified, a new one is generated.
-    """
-    # Improved trigger detection logic
-    if trigger is None:
-        # If this is a trigger, use it directly
-        if entity_type == "trigger" and isinstance(entity, Trigger):
-            trigger = entity
-        # If the entity has a trigger attribute and it's a Trigger model
-        elif hasattr(entity, "trigger") and isinstance(entity.trigger, Trigger):
-            trigger = entity.trigger
-        # If we have an attribute related to the trigger, try to use it
-        elif hasattr(entity, "trigger_id") and entity.trigger_id:
-            try:
-                trigger = Trigger.objects.get(pk=entity.trigger_id)
-            except Trigger.DoesNotExist:
-                pass
-    # Check that the trigger is defined
-    if trigger is None:
-        # Can throw an exception or just add information about missing trigger to details
-        return None
-    
-    if not details:
-        details = {}
-    
-    # If execution identifier not provided, generate a new one
-    if run_id is None:
-        run_id = uuid.uuid4()
-    
-    # Get string path to the object class
-    entity_class = entity.__class__
-    entity_class_path = f"{entity_class.__module__}.{entity_class.__name__}"
-
-    # If needed to verify or fix, probably better
-    TriggerLog.objects.create(
-        run_id=run_id,
-        entity_type=entity_type,
-        entity_id=entity.pk,
-        entity_class_path=entity_class_path,
-        entity_name=str(entity),
-        trigger=trigger,
-        user=user,
-        stage=stage,
-        result=result,
-        details=details
-    )
-    
-    return run_id  # Return run_id for use in subsequent calls
