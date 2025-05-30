@@ -10,9 +10,9 @@ from triggers.models import (
     Condition,
     Event,
     Trigger,
-    TriggerLog,
-    log_trigger_event,
 )
+from triggers.contrib.logging.models import TriggerLog
+from triggers.log import log_trigger_event
 from triggers.tasks import handle_event
 
 

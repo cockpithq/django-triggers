@@ -3,7 +3,10 @@ import uuid
 from django.contrib.auth import get_user_model
 import pytest
 
-from triggers.models import Action, Event, Trigger, TriggerLog, log_trigger_event
+from triggers.models import Action, Event, Trigger
+from tests.app.models import SendEmailAction
+from triggers.contrib.logging.models import TriggerLog
+from triggers.log import log_trigger_event
 from triggers.tasks import handle_event
 
 
@@ -27,9 +30,7 @@ def event(trigger):
 
 @pytest.fixture
 def test_action(trigger):
-    # Use the default manager model to create an action
-    # to avoid problems with model without app_label
-    return Action._default_manager.create(trigger=trigger)
+    return SendEmailAction.objects.create(trigger=trigger, subject="s", message="m")
 
 
 @pytest.mark.django_db
