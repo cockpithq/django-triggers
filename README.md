@@ -165,6 +165,62 @@ uv pip install -e ".[dev]"
 uv sync
 ```
 
+## Temporal Integration
+
+Starting with version 1.1.0, django-triggers supports using [Temporal](https://temporal.io/) as an alternative to Celery for trigger execution. Temporal provides advanced workflow capabilities like long-running user journeys, workflow versioning, and replay protection.
+
+### Setup
+
+1. Install the required dependencies:
+
+```shell
+# Using uv
+uv add temporalio asgiref
+uv sync
+
+# Or with pip
+pip install temporalio asgiref
+```
+
+2. Enable Temporal integration in your Django settings:
+
+```python
+# in your project's settings.py
+TRIGGERS_USE_TEMPORAL = True
+
+# Optional Temporal configuration
+TEMPORAL_HOST = "localhost:7233"  # Your Temporal server address
+TEMPORAL_NAMESPACE = "triggers"    # Your Temporal namespace
+TEMPORAL_TASK_QUEUE = "triggers"   # Task queue for trigger workflows
+```
+
+3. Start a Temporal worker to process trigger workflows:
+
+```shell
+python manage.py temporal_worker
+```
+
+### Migrating from Celery
+
+The Temporal integration is designed to work alongside the existing Celery-based implementation, allowing for a gradual migration:
+
+1. Install the Temporal SDK and enable it in your settings
+2. Run both Celery and Temporal workers during the transition
+3. Once verified, you can disable the Celery worker
+
+The trigger models, admin interface, and API remain unchanged, making this a seamless backend upgrade.
+
+### Advanced Temporal Features
+
+Temporal enables several advanced workflow patterns that weren't possible with Celery:
+
+- **Long-running user journeys**: Create multi-step workflows that can span days or weeks
+- **Workflow versioning**: Update workflow code without affecting in-flight executions
+- **Exact-once execution**: Workflows are guaranteed to execute once, even after crashes or restarts
+- **Workflow replay protection**: Temporal's workflow engine ensures deterministic execution
+
+For more information about Temporal, see the [Temporal documentation](https://docs.temporal.io/).
+
 [latest-version-image]: https://img.shields.io/pypi/v/dj-triggers.svg
 [latest-version-link]: https://pypi.org/project/dj-triggers/
 [codecov-image]: https://codecov.io/gh/cockpithq/django-triggers/branch/main/graph/badge.svg?token=R5CG3VJI73

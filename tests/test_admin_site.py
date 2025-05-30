@@ -12,31 +12,32 @@ from tests.app.models import (
 )
 from triggers.models import Action, ActionCountCondition, ActionFrequencyCondition, Condition, Event
 
+
 TriggerComponent: TypeAlias = Union[Action, Condition, Event]
 
 
 expected_trigger_components: Mapping[str, List[Type[TriggerComponent]]] = {
-    'actions': [
+    "actions": [
         SendEmailAction,
     ],
-    'conditions': [
+    "conditions": [
         ActionCountCondition,
         ActionFrequencyCondition,
         HasUncompletedTaskCondition,
     ],
-    'events': [
+    "events": [
         ClockEvent,
         TaskCompletedEvent,
     ],
 }
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_available_trigger_components(admin_client):
-    response = admin_client.get('/admin/triggers/trigger/add/')
+    response = admin_client.get("/admin/triggers/trigger/add/")
     assert response.status_code == 200
     actual_trigger_components: Dict[str, list[Type[TriggerComponent]]] = defaultdict(list)
-    for inline_formset in response.context_data['inline_admin_formsets']:
+    for inline_formset in response.context_data["inline_admin_formsets"]:
         actual_trigger_components[inline_formset.formset.prefix] = [
             empty_form.instance.__class__ for empty_form
             in inline_formset.formset.empty_forms
