@@ -2,6 +2,7 @@ from celery import shared_task
 from django.dispatch import Signal, receiver
 
 from triggers.models import Event
+from triggers.observers import TRACE_ID_CONTEXT_KEY
 
 
 @receiver(Event.fired)
@@ -16,4 +17,5 @@ def on_event_fired(sender, signal: Signal, event: Event, user_pk, **kwargs):
 @shared_task
 def handle_event(event_pk, user_pk, **context):
     event: Event = Event.objects.get(pk=event_pk)
-    event.handle(user_pk, **context)
+    trace_id = context.pop(TRACE_ID_CONTEXT_KEY, "")
+    event.handle(user_pk, trace_id=trace_id, **context)

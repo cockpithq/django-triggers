@@ -114,6 +114,25 @@ You may also trigger it manually from the Django admin site if you're checking t
 
 <img width="369" alt="image" src="https://user-images.githubusercontent.com/101798/225565474-8d594a19-03b7-4501-b995-d66f45acdf64.png">
 
+## Optional execution logs
+
+`django-triggers` does not persist execution logs by default.
+
+If you need compact execution logs (event run, condition checks, action result), add the contrib app
+and enable the observer backend:
+
+```python
+INSTALLED_APPS = [
+    ...
+    "triggers",
+    "triggers.contrib.logging",
+]
+
+TRIGGERS_OBSERVER = "triggers.contrib.logging.backends.DBExecutionLogBackend"
+```
+
+This keeps the core trigger pipeline clean and allows projects to opt in only when needed.
+
 ## Development
 
 ### Run a django-admin command, e.g. `makemigrations`

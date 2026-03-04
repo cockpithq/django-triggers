@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import datetime
 from typing import Any, Dict, Generator, Mapping, Type
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,6 +11,7 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
+from triggers.observers import get_trigger_observer, TRACE_ID_CONTEXT_KEY
 
 User = get_user_model()
 
@@ -41,11 +43,64 @@ class Trigger(PolymorphicModel):
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
 
-    def on_event(self, user, context: Mapping[str, Any]):
-        if user and all(condition.is_satisfied(user) for condition in self.conditions.all()):
+    def on_event(self, user, context: Mapping[str, Any], run_id: str):
+        observer = get_trigger_observer()
+        conditions = list(self.conditions.all())
+        is_allowed = True
+        for condition in conditions:
+            is_satisfied = condition.is_satisfied(user)
+            observer.on_condition_checked(
+                run_id=run_id,
+                trigger=self,
+                user_pk=user.pk,
+                condition=condition,
+                is_satisfied=is_satisfied,
+            )
+            if not is_satisfied:
+                is_allowed = False
+        if user and is_allowed:
             with Activity.lock(user, self):
                 for action in self.actions.all():
-                    action.perform(user, context)
+                    try:
+                        action.perform(user, context)
+                    except Exception as error:
+                        observer.on_action_failed(
+                            run_id=run_id,
+                            trigger=self,
+                            user_pk=user.pk,
+                            action=action,
+                            error=error,
+                        )
+                        observer.on_run_completed(
+                            run_id=run_id,
+                            event=None,
+                            trigger=self,
+                            user_pk=user.pk,
+                            result='action_failed',
+                        )
+                        raise
+                    else:
+                        observer.on_action_performed(
+                            run_id=run_id,
+                            trigger=self,
+                            user_pk=user.pk,
+                            action=action,
+                        )
+            observer.on_run_completed(
+                run_id=run_id,
+                event=None,
+                trigger=self,
+                user_pk=user.pk,
+                result='success',
+            )
+        elif user:
+            observer.on_run_completed(
+                run_id=run_id,
+                event=None,
+                trigger=self,
+                user_pk=user.pk,
+                result='conditions_failed',
+            )
 
 
 class Activity(PolymorphicModel):
@@ -149,20 +204,52 @@ class Event(PolymorphicModel):
         return user_context
 
     def fire(self, user_queryset: models.QuerySet, **kwargs) -> None:
+        observer = get_trigger_observer()
         if self.should_be_fired(**kwargs):
             prefiltered_user_queryset = self.trigger.filter_user_queryset(user_queryset)
             for user_pk in prefiltered_user_queryset.values_list('pk', flat=True).iterator():
-                self.fired.send(self.__class__, event=self, user_pk=user_pk, **kwargs)
+                run_id = uuid.uuid4().hex
+                event_context = dict(kwargs)
+                event_context[TRACE_ID_CONTEXT_KEY] = run_id
+                observer.on_event_enqueued(
+                    run_id=run_id,
+                    event=self,
+                    user_pk=user_pk,
+                    context=event_context,
+                )
+                self.fired.send(self.__class__, event=self, user_pk=user_pk, **event_context)
 
     def fire_single(self, user_pk: Any, **kwargs):
         self.fire(User.objects.filter(pk=user_pk), **kwargs)
 
-    def handle(self, user_pk, **context):
+    def handle(self, user_pk, trace_id: str = "", **context):
+        observer = get_trigger_observer()
+        run_id = trace_id or uuid.uuid4().hex
+        observer.on_event_started(
+            run_id=run_id,
+            event=self,
+            user_pk=user_pk,
+            context=context,
+        )
         user_queryset = self.trigger.filter_user_queryset(User.objects.filter(pk=user_pk))
         user = user_queryset.first()
+        observer.on_user_resolved(
+            run_id=run_id,
+            event=self,
+            user_pk=user_pk,
+            is_found=bool(user),
+        )
         if user:
             user_context = self.get_user_context(user, context)
-            self.trigger.on_event(user, user_context)
+            self.trigger.on_event(user, user_context, run_id=run_id)
+        else:
+            observer.on_run_completed(
+                run_id=run_id,
+                event=self,
+                trigger=self.trigger,
+                user_pk=user_pk,
+                result='user_not_found',
+            )
 
 
 class Condition(PolymorphicModel):
