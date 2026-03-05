@@ -59,14 +59,28 @@ def _get_or_create_log(
 
 
 @receiver(event_enqueued)
-def on_event_enqueued(sender, run_id: str, event, user_pk: Any, context: Mapping[str, Any], **kwargs):
+def on_event_enqueued(
+    sender,
+    run_id: str,
+    event,
+    user_pk: Any,
+    context: Mapping[str, Any],
+    **kwargs,
+):
     if not _is_enabled():
         return
     _get_or_create_log(run_id=run_id, event=event, user_pk=user_pk)
 
 
 @receiver(event_started)
-def on_event_started(sender, run_id: str, event, user_pk: Any, context: Mapping[str, Any], **kwargs):
+def on_event_started(
+    sender,
+    run_id: str,
+    event,
+    user_pk: Any,
+    context: Mapping[str, Any],
+    **kwargs,
+):
     if not _is_enabled():
         return
     _get_or_create_log(run_id=run_id, event=event, user_pk=user_pk)
