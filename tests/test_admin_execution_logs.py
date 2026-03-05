@@ -130,3 +130,47 @@ def test_execution_logs_timeline_displays_runs_for_multiple_triggers(admin_clien
     assert log_2.run_id.encode() in response.content
     assert trigger_1.name.encode() in response.content
     assert trigger_2.name.encode() in response.content
+
+
+@pytest.mark.django_db()
+def test_execution_logs_timeline_is_paginated_by_50(admin_client):
+    trigger = baker.make(Trigger, name="Execution Timeline Trigger")
+    user = baker.make(User, email="bob@example.com")
+    run_ids = []
+    for idx in range(55):
+        run_id = f"{idx:032d}"
+        run_ids.append(run_id)
+        baker.make(
+            TriggerExecutionLog,
+            trigger=trigger,
+            user=user,
+            status=TriggerExecutionLog.STATUS_SUCCESS,
+            run_id=run_id,
+            steps=[[1, 1, 1700000000000 + idx]],
+        )
+
+    first_page_response = admin_client.get(
+        reverse("admin:triggers_trigger_execution_logs"),
+        {
+            "trigger_id": str(trigger.pk),
+            "email": user.email,
+        },
+    )
+
+    assert first_page_response.status_code == 200
+    assert b"Page 1 of 2" in first_page_response.content
+    assert run_ids[-1].encode() in first_page_response.content
+    assert run_ids[0].encode() not in first_page_response.content
+
+    second_page_response = admin_client.get(
+        reverse("admin:triggers_trigger_execution_logs"),
+        {
+            "trigger_id": str(trigger.pk),
+            "email": user.email,
+            "page": "2",
+        },
+    )
+
+    assert second_page_response.status_code == 200
+    assert b"Page 2 of 2" in second_page_response.content
+    assert run_ids[0].encode() in second_page_response.content

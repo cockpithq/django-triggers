@@ -6,6 +6,7 @@ from django import forms
 from django.apps import apps
 from django.contrib import admin, messages
 from django.contrib.admin import helpers
+from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -379,9 +380,12 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         )
         trigger_ids_set = {trigger.pk for trigger in triggers}
         trigger = triggers[0] if len(triggers) == 1 else None
+        trigger_ids_query = ",".join(str(trigger_id) for trigger_id in trigger_ids)
+        page_number = request.GET.get("page", "1")
 
         logs = []
         user = None
+        page_obj = None
         if triggers and email:
             execution_log_model = apps.get_model("logging", "TriggerExecutionLog")
             email_field_name = User.get_email_field_name()
@@ -409,7 +413,9 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                 raw_logs = execution_log_model.objects.filter(
                     trigger_id__in=trigger_ids_set,
                     user=user,
-                ).select_related("trigger").order_by("-created_at")
+                ).select_related("trigger").order_by("-created_at", "-pk")
+                paginator = Paginator(raw_logs, 50)
+                page_obj = paginator.get_page(page_number)
                 logs = [
                     {
                         "log": log,
@@ -426,8 +432,15 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                             ),
                         ),
                     }
-                    for log in raw_logs
+                    for log in page_obj.object_list
                 ]
+
+        pagination_query = urlencode(
+            {
+                "trigger_ids": trigger_ids_query,
+                "email": email,
+            }
+        )
 
         context = {
             **self.admin_site.each_context(request),
@@ -435,10 +448,12 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             "title": _("Execution logs timeline"),
             "trigger": trigger,
             "triggers": triggers,
-            "trigger_ids_query": ",".join(str(trigger_id) for trigger_id in trigger_ids),
+            "trigger_ids_query": trigger_ids_query,
             "email": email,
             "user": user,
             "logs": logs,
+            "page_obj": page_obj,
+            "pagination_query": pagination_query,
         }
         return TemplateResponse(
             request,

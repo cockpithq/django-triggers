@@ -72,6 +72,22 @@
     <p>{% trans "No execution logs for selected trigger and user." %}</p>
   {% endif %}
 
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="paginator">
+      <span>
+        {% blocktranslate with page_number=page_obj.number total_pages=page_obj.paginator.num_pages %}
+          Page {{ page_number }} of {{ total_pages }}
+        {% endblocktranslate %}
+      </span>
+      {% if page_obj.has_previous %}
+        <a href="?{{ pagination_query }}&page={{ page_obj.previous_page_number }}">{% trans "previous" %}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?{{ pagination_query }}&page={{ page_obj.next_page_number }}">{% trans "next" %}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <p style="margin-top: 16px;">
     <a href="{% url 'admin:triggers_trigger_changelist' %}">{% trans "Back to triggers" %}</a>
   </p>
