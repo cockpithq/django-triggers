@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, cast
 from urllib.parse import urlencode
 
 from django import forms
@@ -387,22 +387,25 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             email_field_name = User.get_email_field_name()
             user = User.objects.filter(**{f"{email_field_name}__iexact": email}).first()
             if user:
-                condition_names_by_trigger = {
+                condition_names_by_trigger: Dict[int, Dict[int, str]] = {
                     trigger_obj.pk: {
                         condition.pk: str(condition)
                         for condition in trigger_obj.conditions.all()
                         if condition.pk is not None
                     }
                     for trigger_obj in triggers
+                    if trigger_obj.pk is not None
                 }
-                action_names_by_trigger = {
+                action_names_by_trigger: Dict[int, Dict[int, str]] = {
                     trigger_obj.pk: {
                         action.pk: str(action)
                         for action in trigger_obj.actions.all()
                         if action.pk is not None
                     }
                     for trigger_obj in triggers
+                    if trigger_obj.pk is not None
                 }
+                default_names: Dict[int, str] = {}
                 raw_logs = execution_log_model.objects.filter(
                     trigger_id__in=trigger_ids_set,
                     user=user,
@@ -414,12 +417,12 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                         "steps": self._format_steps(
                             steps=list(log.steps),
                             condition_names=condition_names_by_trigger.get(
-                                log.trigger_id,
-                                {},
+                                cast(int, log.trigger_id),
+                                default_names,
                             ),
                             action_names=action_names_by_trigger.get(
-                                log.trigger_id,
-                                {},
+                                cast(int, log.trigger_id),
+                                default_names,
                             ),
                         ),
                     }
