@@ -2,7 +2,7 @@ from celery import shared_task
 from django.dispatch import Signal, receiver
 
 from triggers.models import Event
-from triggers.observers import TRACE_ID_CONTEXT_KEY
+from triggers.signals import TRACE_ID_CONTEXT_KEY
 
 
 @receiver(Event.fired)

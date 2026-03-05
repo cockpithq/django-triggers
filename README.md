@@ -119,7 +119,7 @@ You may also trigger it manually from the Django admin site if you're checking t
 `django-triggers` does not persist execution logs by default.
 
 If you need compact execution logs (event run, condition checks, action result), add the contrib app
-and enable the observer backend:
+and enable execution logging:
 
 ```python
 INSTALLED_APPS = [
@@ -128,7 +128,7 @@ INSTALLED_APPS = [
     "triggers.contrib.logging",
 ]
 
-TRIGGERS_OBSERVER = "triggers.contrib.logging.backends.DBExecutionLogBackend"
+TRIGGERS_EXECUTION_LOGGING_ENABLED = True  # default
 ```
 
 This keeps the core trigger pipeline clean and allows projects to opt in only when needed.

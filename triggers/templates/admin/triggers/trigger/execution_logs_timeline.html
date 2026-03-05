@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <form method="get" style="margin-bottom: 16px;">
+    {% if trigger %}
+      <input type="hidden" name="trigger_id" value="{{ trigger.pk }}" />
+    {% endif %}
+    <label for="id_email">{% trans "User email" %}:</label>
+    <input id="id_email" type="email" name="email" value="{{ email }}" required />
+    <button type="submit" class="default">{% trans "Filter" %}</button>
+  </form>
+
+  {% if trigger %}
+    <p>
+      <strong>{% trans "Trigger" %}:</strong> {{ trigger.name }}
+    </p>
+  {% endif %}
+
+  {% if email and not user %}
+    <p>{% trans "No user found for this email." %}</p>
+  {% endif %}
+
+  {% if logs %}
+    {% for item in logs %}
+      <div style="padding: 12px; margin-bottom: 10px; border: 1px solid #d9d9d9; border-radius: 6px;">
+        <div>
+          <strong>{{ item.log.created_at }}</strong>
+          — {{ item.log.get_status_display }}
+          — <code>{{ item.log.run_id }}</code>
+        </div>
+        {% if item.steps %}
+          <ul style="margin-top: 8px;">
+            {% for step in item.steps %}
+              <li>{{ step }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>{% trans "No details available." %}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% elif user %}
+    <p>{% trans "No execution logs for selected trigger and user." %}</p>
+  {% endif %}
+
+  <p style="margin-top: 16px;">
+    <a href="{% url 'admin:triggers_trigger_changelist' %}">{% trans "Back to triggers" %}</a>
+  </p>
+{% endblock %}

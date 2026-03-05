@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+  <p>
+    {% blocktranslate with trigger_name=trigger.name %}
+      Trigger: {{ trigger_name }}
+    {% endblocktranslate %}
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    {% for obj in queryset %}
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}" />
+    {% endfor %}
+    <input type="hidden" name="action" value="{{ action_name }}" />
+    <input type="hidden" name="apply" value="1" />
+    {{ form.as_p }}
+    <button type="submit" class="default">{% trans "Show timeline" %}</button>
+  </form>
+{% endblock %}

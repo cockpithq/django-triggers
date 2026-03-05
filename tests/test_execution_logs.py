@@ -29,7 +29,7 @@ def trigger() -> Trigger:
 
 
 @pytest.mark.django_db()
-@override_settings(TRIGGERS_OBSERVER='triggers.contrib.logging.backends.DBExecutionLogBackend')
+@override_settings(TRIGGERS_EXECUTION_LOGGING_ENABLED=True)
 def test_execution_log_created_for_successful_run(user: User, trigger: Trigger):
     task = baker.make(Task, user=user, is_important=True)
 
@@ -46,7 +46,7 @@ def test_execution_log_created_for_successful_run(user: User, trigger: Trigger):
 
 
 @pytest.mark.django_db()
-@override_settings(TRIGGERS_OBSERVER='triggers.contrib.logging.backends.DBExecutionLogBackend')
+@override_settings(TRIGGERS_EXECUTION_LOGGING_ENABLED=True)
 def test_execution_log_created_for_missing_user(trigger: Trigger):
     event = trigger.events.instance_of(TaskCompletedEvent).first()
     assert event
@@ -62,7 +62,8 @@ def test_execution_log_created_for_missing_user(trigger: Trigger):
 
 
 @pytest.mark.django_db()
-def test_execution_logs_not_created_without_observer(user: User, trigger: Trigger):
+@override_settings(TRIGGERS_EXECUTION_LOGGING_ENABLED=False)
+def test_execution_logs_not_created_when_disabled(user: User, trigger: Trigger):
     task = baker.make(Task, user=user, is_important=True)
 
     task.complete()
