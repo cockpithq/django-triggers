@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block content %}
-  <h1>{{ title }}</h1>
-
   <form method="get" style="margin-bottom: 16px;">
     {% if trigger %}
       <input type="hidden" name="trigger_id" value="{{ trigger.pk }}" />
+    {% elif trigger_ids_query %}
+      <input type="hidden" name="trigger_ids" value="{{ trigger_ids_query }}" />
     {% endif %}
     <label for="id_email">{% trans "User email" %}:</label>
     <input id="id_email" type="email" name="email" value="{{ email }}" required />

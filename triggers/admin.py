@@ -435,6 +435,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             "title": _("Execution logs timeline"),
             "trigger": trigger,
             "triggers": triggers,
+            "trigger_ids_query": ",".join(str(trigger_id) for trigger_id in trigger_ids),
             "email": email,
             "user": user,
             "logs": logs,

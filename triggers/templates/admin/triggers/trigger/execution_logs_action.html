@@ -2,7 +2,6 @@
 {% load i18n %}
 
 {% block content %}
-  <h1>{{ title }}</h1>
   {% if triggers|length == 1 %}
     <p>
       {% blocktranslate with trigger_name=triggers.0.name %}
@@ -24,6 +23,14 @@
     <input type="hidden" name="action" value="{{ action_name }}" />
     <input type="hidden" name="apply" value="1" />
     {{ form.as_p }}
-    <button type="submit" class="default">{% trans "Show timeline" %}</button>
+    <div class="submit-row">
+      <button
+        type="submit"
+        class="default"
+        style="min-width: 132px; padding: 6px 12px;"
+      >
+        {% trans "Show timeline" %}
+      </button>
+    </div>
   </form>
 {% endblock %}
