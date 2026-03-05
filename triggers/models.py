@@ -11,6 +11,7 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
+
 from triggers.signals import (
     TRACE_ID_CONTEXT_KEY,
     action_failed,

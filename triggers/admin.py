@@ -2,10 +2,9 @@ from typing import Any, Dict, Iterable, List, Tuple, Type
 from urllib.parse import urlencode
 
 from django import forms
-from django.contrib import admin
-from django.contrib import messages
-from django.contrib.admin import helpers
 from django.apps import apps
+from django.contrib import admin, messages
+from django.contrib.admin import helpers
 from django.http import HttpRequest, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse

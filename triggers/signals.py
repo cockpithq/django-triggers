@@ -1,6 +1,5 @@
 from django.dispatch import Signal
 
-
 TRACE_ID_CONTEXT_KEY = "_triggers_trace_id"
 
 event_enqueued = Signal()
