@@ -22,15 +22,18 @@
     {% endfor %}
     <input type="hidden" name="action" value="{{ action_name }}" />
     <input type="hidden" name="apply" value="1" />
-    {{ form.as_p }}
-    <div class="submit-row">
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      {{ form.email.label_tag }}
+      {{ form.email }}
       <button
         type="submit"
-        class="default"
-        style="min-width: 132px; padding: 6px 12px;"
+        style="min-width: 132px; padding: 6px 12px; border: 1px solid #205067; border-radius: 4px; background: #417690; color: #fff; font-weight: 600; cursor: pointer;"
       >
         {% trans "Show timeline" %}
       </button>
     </div>
+    {% if form.email.errors %}
+      {{ form.email.errors }}
+    {% endif %}
   </form>
 {% endblock %}
