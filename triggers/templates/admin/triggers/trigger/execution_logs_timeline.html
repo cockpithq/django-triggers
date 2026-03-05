@@ -23,6 +23,13 @@
     <p>
       <strong>{% trans "Trigger" %}:</strong> {{ trigger.name }}
     </p>
+  {% elif triggers %}
+    <p>
+      <strong>{% trans "Triggers" %}:</strong>
+      {% for trigger_item in triggers %}
+        {{ trigger_item.name }}{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </p>
   {% endif %}
 
   {% if email and not user %}
@@ -40,6 +47,9 @@
           >
             {{ item.log.get_status_display }}
           </span>
+          {% if item.log.trigger %}
+            — {{ item.log.trigger.name }}
+          {% endif %}
           — <code>{{ item.log.run_id }}</code>
         </div>
         {% if item.steps %}

@@ -39,7 +39,27 @@ def test_execution_logs_action_redirects_to_timeline(admin_client):
 
     assert response.status_code == 302
     assert "execution-logs/" in response["Location"]
+    assert f"trigger_ids={trigger.pk}" in response["Location"]
     assert "email=bob%40example.com" in response["Location"]
+
+
+@pytest.mark.django_db()
+def test_execution_logs_action_redirects_to_timeline_for_multiple_triggers(admin_client):
+    trigger_1 = baker.make(Trigger, name="Execution Timeline Trigger A")
+    trigger_2 = baker.make(Trigger, name="Execution Timeline Trigger B")
+
+    response = admin_client.post(
+        reverse("admin:triggers_trigger_changelist"),
+        {
+            "action": "view_user_execution_logs",
+            "_selected_action": [str(trigger_1.pk), str(trigger_2.pk)],
+            "apply": "1",
+            "email": "bob@example.com",
+        },
+    )
+
+    assert response.status_code == 302
+    assert f"trigger_ids={trigger_1.pk}%2C{trigger_2.pk}" in response["Location"]
 
 
 @pytest.mark.django_db()
@@ -73,3 +93,40 @@ def test_execution_logs_timeline_displays_run(admin_client):
     assert b"Event handling started" in response.content
     assert b"+100 ms" in response.content
     assert b"background:" in response.content
+
+
+@pytest.mark.django_db()
+def test_execution_logs_timeline_displays_runs_for_multiple_triggers(admin_client):
+    trigger_1 = baker.make(Trigger, name="Execution Timeline Trigger A")
+    trigger_2 = baker.make(Trigger, name="Execution Timeline Trigger B")
+    user = baker.make(User, email="bob@example.com")
+    log_1 = baker.make(
+        TriggerExecutionLog,
+        trigger=trigger_1,
+        user=user,
+        status=TriggerExecutionLog.STATUS_SUCCESS,
+        run_id="a" * 32,
+        steps=[[1, 1, 1700000000000]],
+    )
+    log_2 = baker.make(
+        TriggerExecutionLog,
+        trigger=trigger_2,
+        user=user,
+        status=TriggerExecutionLog.STATUS_ACTION_FAILED,
+        run_id="b" * 32,
+        steps=[[1, 1, 1700000000100]],
+    )
+
+    response = admin_client.get(
+        reverse("admin:triggers_trigger_execution_logs"),
+        {
+            "trigger_ids": f"{trigger_1.pk},{trigger_2.pk}",
+            "email": user.email,
+        },
+    )
+
+    assert response.status_code == 200
+    assert log_1.run_id.encode() in response.content
+    assert log_2.run_id.encode() in response.content
+    assert trigger_1.name.encode() in response.content
+    assert trigger_2.name.encode() in response.content

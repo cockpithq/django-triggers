@@ -3,11 +3,19 @@
 
 {% block content %}
   <h1>{{ title }}</h1>
-  <p>
-    {% blocktranslate with trigger_name=trigger.name %}
-      Trigger: {{ trigger_name }}
-    {% endblocktranslate %}
-  </p>
+  {% if triggers|length == 1 %}
+    <p>
+      {% blocktranslate with trigger_name=triggers.0.name %}
+        Trigger: {{ trigger_name }}
+      {% endblocktranslate %}
+    </p>
+  {% else %}
+    <p>
+      {% blocktranslate with trigger_count=triggers|length %}
+        Selected triggers: {{ trigger_count }}
+      {% endblocktranslate %}
+    </p>
+  {% endif %}
   <form method="post">
     {% csrf_token %}
     {% for obj in queryset %}

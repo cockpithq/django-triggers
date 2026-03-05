@@ -175,23 +175,22 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
 
     @admin.action(description=_("View user execution logs"))
     def view_user_execution_logs(self, request: HttpRequest, queryset):
-        if queryset.count() != 1:
+        if not queryset.exists():
             self.message_user(
                 request,
-                _("Please select exactly one trigger."),
+                _("Please select at least one trigger."),
                 level=messages.ERROR,
             )
             return None
 
-        trigger = queryset.first()
-        if trigger is None:
-            return None
+        selected_trigger_ids = sorted(queryset.values_list("pk", flat=True))
+        selected_triggers = list(queryset.order_by("name"))
 
         form = TriggerExecutionLogsForm(request.POST or None)
         if request.POST.get("apply") and form.is_valid():
             query_string = urlencode(
                 {
-                    "trigger_id": trigger.pk,
+                    "trigger_ids": ",".join(str(trigger_id) for trigger_id in selected_trigger_ids),
                     "email": form.cleaned_data["email"],
                 }
             )
@@ -206,7 +205,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             "title": _("View user execution logs timeline"),
             "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
             "action_name": "view_user_execution_logs",
-            "trigger": trigger,
+            "triggers": selected_triggers,
         }
         return TemplateResponse(
             request,
@@ -358,39 +357,70 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             )
             return HttpResponseRedirect(reverse("admin:triggers_trigger_changelist"))
 
-        trigger_id = request.GET.get("trigger_id", "")
+        trigger_ids_raw = request.GET.get("trigger_ids", "")
+        single_trigger_id = request.GET.get("trigger_id", "")
         email = request.GET.get("email", "").strip()
-        trigger = Trigger.objects.filter(pk=trigger_id).first() if trigger_id else None
+
+        if trigger_ids_raw:
+            trigger_ids = [
+                int(trigger_id)
+                for trigger_id in trigger_ids_raw.split(",")
+                if trigger_id.strip().isdigit()
+            ]
+        elif single_trigger_id.isdigit():
+            trigger_ids = [int(single_trigger_id)]
+        else:
+            trigger_ids = []
+
+        triggers = list(
+            Trigger.objects.filter(pk__in=trigger_ids)
+            .prefetch_related("conditions", "actions")
+            .order_by("name")
+        )
+        trigger_ids_set = {trigger.pk for trigger in triggers}
+        trigger = triggers[0] if len(triggers) == 1 else None
 
         logs = []
         user = None
-        if trigger and email:
+        if triggers and email:
             execution_log_model = apps.get_model("logging", "TriggerExecutionLog")
             email_field_name = User.get_email_field_name()
             user = User.objects.filter(**{f"{email_field_name}__iexact": email}).first()
             if user:
-                condition_names = {
-                    condition.pk: str(condition)
-                    for condition in trigger.conditions.all()
-                    if condition.pk is not None
+                condition_names_by_trigger = {
+                    trigger_obj.pk: {
+                        condition.pk: str(condition)
+                        for condition in trigger_obj.conditions.all()
+                        if condition.pk is not None
+                    }
+                    for trigger_obj in triggers
                 }
-                action_names = {
-                    action.pk: str(action)
-                    for action in trigger.actions.all()
-                    if action.pk is not None
+                action_names_by_trigger = {
+                    trigger_obj.pk: {
+                        action.pk: str(action)
+                        for action in trigger_obj.actions.all()
+                        if action.pk is not None
+                    }
+                    for trigger_obj in triggers
                 }
                 raw_logs = execution_log_model.objects.filter(
-                    trigger=trigger,
+                    trigger_id__in=trigger_ids_set,
                     user=user,
-                ).order_by("-created_at")
+                ).select_related("trigger").order_by("-created_at")
                 logs = [
                     {
                         "log": log,
                         "status_badge": self._get_status_badge(log.status),
                         "steps": self._format_steps(
                             steps=list(log.steps),
-                            condition_names=condition_names,
-                            action_names=action_names,
+                            condition_names=condition_names_by_trigger.get(
+                                log.trigger_id,
+                                {},
+                            ),
+                            action_names=action_names_by_trigger.get(
+                                log.trigger_id,
+                                {},
+                            ),
                         ),
                     }
                     for log in raw_logs
@@ -401,6 +431,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             "opts": self.model._meta,
             "title": _("Execution logs timeline"),
             "trigger": trigger,
+            "triggers": triggers,
             "email": email,
             "user": user,
             "logs": logs,
