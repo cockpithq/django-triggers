@@ -43,6 +43,7 @@ def test_execution_log_created_for_successful_run(user: User, trigger: Trigger):
     assert execution_log.steps
     assert any(step[0] == 3 for step in execution_log.steps)
     assert any(step[0] == 4 and step[2] == 1 for step in execution_log.steps)
+    assert all(isinstance(step[-1], int) for step in execution_log.steps)
 
 
 @pytest.mark.django_db()

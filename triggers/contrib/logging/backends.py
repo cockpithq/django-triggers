@@ -29,12 +29,16 @@ def _is_enabled() -> bool:
     return bool(getattr(settings, "TRIGGERS_EXECUTION_LOGGING_ENABLED", True))
 
 
+def _get_step_timestamp_ms() -> int:
+    return int(timezone.now().timestamp() * 1000)
+
+
 def _append_step(*, run_id: str, step):
     execution_log = TriggerExecutionLog.objects.filter(run_id=run_id).first()
     if not execution_log:
         return
     steps = list(execution_log.steps)
-    steps.append(step)
+    steps.append([*step, _get_step_timestamp_ms()])
     TriggerExecutionLog.objects.filter(pk=execution_log.pk).update(steps=steps)
 
 

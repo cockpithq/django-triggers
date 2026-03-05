@@ -52,7 +52,12 @@ def test_execution_logs_timeline_displays_run(admin_client):
         user=user,
         status=TriggerExecutionLog.STATUS_SUCCESS,
         run_id="f" * 32,
-        steps=[[1, 1], [2, 1], [3, 100, 1], [4, 200, 1]],
+        steps=[
+            [1, 1, 1700000000000],
+            [2, 1, 1700000000100],
+            [3, 100, 1, 1700000000200],
+            [4, 200, 1, 1700000000400],
+        ],
     )
 
     response = admin_client.get(
@@ -66,3 +71,5 @@ def test_execution_logs_timeline_displays_run(admin_client):
     assert response.status_code == 200
     assert execution_log.run_id.encode() in response.content
     assert b"Event handling started" in response.content
+    assert b"+100 ms" in response.content
+    assert b"background:" in response.content

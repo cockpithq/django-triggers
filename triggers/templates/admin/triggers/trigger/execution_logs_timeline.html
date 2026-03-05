@@ -10,7 +10,13 @@
     {% endif %}
     <label for="id_email">{% trans "User email" %}:</label>
     <input id="id_email" type="email" name="email" value="{{ email }}" required />
-    <button type="submit" class="default">{% trans "Filter" %}</button>
+    <button
+      type="submit"
+      class="default"
+      style="min-width: 84px; padding: 6px 12px;"
+    >
+      {% trans "Filter" %}
+    </button>
   </form>
 
   {% if trigger %}
@@ -28,13 +34,23 @@
       <div style="padding: 12px; margin-bottom: 10px; border: 1px solid #d9d9d9; border-radius: 6px;">
         <div>
           <strong>{{ item.log.created_at }}</strong>
-          — {{ item.log.get_status_display }}
+          —
+          <span
+            style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: {{ item.status_badge.background }}; color: {{ item.status_badge.color }};"
+          >
+            {{ item.log.get_status_display }}
+          </span>
           — <code>{{ item.log.run_id }}</code>
         </div>
         {% if item.steps %}
           <ul style="margin-top: 8px;">
             {% for step in item.steps %}
-              <li>{{ step }}</li>
+              <li>
+                {{ step.text }}
+                {% if step.time %}
+                  <span style="color: #6b7280;">({{ step.time }}{% if step.delta %}, {{ step.delta }}{% endif %})</span>
+                {% endif %}
+              </li>
             {% endfor %}
           </ul>
         {% else %}

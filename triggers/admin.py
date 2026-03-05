@@ -1,4 +1,5 @@
-from typing import Any, Dict, Iterable, List, Tuple, Type
+from datetime import datetime
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
 from urllib.parse import urlencode
 
 from django import forms
@@ -8,6 +9,7 @@ from django.contrib.admin import helpers
 from django.http import HttpRequest, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
+from django.utils import timezone
 from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
 from more_admin_filters import MultiSelectRelatedOnlyFilter
@@ -212,27 +214,88 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             context,
         )
 
+    def _get_status_badge(self, status: str) -> Dict[str, str]:
+        status_styles = {
+            "success": {
+                "background": "#dcfce7",
+                "color": "#166534",
+            },
+            "conditions_failed": {
+                "background": "#fef3c7",
+                "color": "#92400e",
+            },
+            "action_failed": {
+                "background": "#fee2e2",
+                "color": "#991b1b",
+            },
+            "user_not_found": {
+                "background": "#e5e7eb",
+                "color": "#374151",
+            },
+            "started": {
+                "background": "#dbeafe",
+                "color": "#1e3a8a",
+            },
+            "enqueued": {
+                "background": "#ede9fe",
+                "color": "#5b21b6",
+            },
+        }
+        return status_styles.get(
+            status,
+            {
+                "background": "#f3f4f6",
+                "color": "#111827",
+            },
+        )
+
+    def _extract_step_timestamp(self, step: List[Any], step_type: int) -> Optional[int]:
+        if step_type in (1, 2) and len(step) > 2 and isinstance(step[2], int):
+            return step[2]
+        if step_type == 3 and len(step) > 3 and isinstance(step[3], int):
+            return step[3]
+        if step_type == 4:
+            if len(step) > 4 and isinstance(step[4], int):
+                return step[4]
+            if len(step) > 3 and isinstance(step[3], int):
+                return step[3]
+        return None
+
+    def _format_step_timestamp(self, timestamp_ms: int) -> str:
+        dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+        return timezone.localtime(dt).strftime("%H:%M:%S.%f")[:-3]
+
+    def _format_step_delta_ms(
+        self,
+        *,
+        previous_timestamp_ms: Optional[int],
+        current_timestamp_ms: int,
+    ) -> Optional[str]:
+        if previous_timestamp_ms is None:
+            return None
+        return f"+{current_timestamp_ms - previous_timestamp_ms} ms"
+
     def _format_steps(
         self,
         *,
         steps: List[Any],
         condition_names: Dict[int, str],
         action_names: Dict[int, str],
-    ) -> List[str]:
-        formatted_steps: List[str] = []
+    ) -> List[Dict[str, Optional[str]]]:
+        formatted_steps: List[Dict[str, Optional[str]]] = []
+        previous_timestamp_ms: Optional[int] = None
         for step in steps:
             if not isinstance(step, list) or not step:
                 continue
             step_type = step[0]
+            text: Optional[str] = None
             if step_type == 1:
-                formatted_steps.append(str(_("Event handling started")))
+                text = str(_("Event handling started"))
             elif step_type == 2:
                 user_found = bool(step[1]) if len(step) > 1 else False
-                formatted_steps.append(
-                    str(_("User resolved: %(status)s")) % {
-                        "status": _("yes") if user_found else _("no")
-                    }
-                )
+                text = str(_("User resolved: %(status)s")) % {
+                    "status": _("yes") if user_found else _("no")
+                }
             elif step_type == 3 and len(step) > 2:
                 condition_id = step[1]
                 condition_name = condition_names.get(
@@ -240,12 +303,10 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                     str(_("Condition #%(id)s")) % {"id": condition_id},
                 )
                 is_satisfied = bool(step[2])
-                formatted_steps.append(
-                    str(_("%(condition)s -> %(status)s")) % {
-                        "condition": condition_name,
-                        "status": _("passed") if is_satisfied else _("failed"),
-                    }
-                )
+                text = str(_("%(condition)s -> %(status)s")) % {
+                    "condition": condition_name,
+                    "status": _("passed") if is_satisfied else _("failed"),
+                }
             elif step_type == 4 and len(step) > 2:
                 action_id = step[1]
                 action_name = action_names.get(
@@ -254,17 +315,38 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                 )
                 is_successful = bool(step[2])
                 if is_successful:
-                    formatted_steps.append(
-                        str(_("%(action)s -> performed")) % {"action": action_name}
-                    )
+                    text = str(_("%(action)s -> performed")) % {"action": action_name}
                 else:
                     error_name = step[3] if len(step) > 3 else _("Unknown error")
-                    formatted_steps.append(
-                        str(_("%(action)s -> failed (%(error)s)")) % {
-                            "action": action_name,
-                            "error": error_name,
-                        }
-                    )
+                    text = str(_("%(action)s -> failed (%(error)s)")) % {
+                        "action": action_name,
+                        "error": error_name,
+                    }
+            if not text:
+                continue
+            timestamp_ms = self._extract_step_timestamp(step, step_type)
+            step_time = (
+                self._format_step_timestamp(timestamp_ms)
+                if timestamp_ms is not None
+                else None
+            )
+            step_delta = (
+                self._format_step_delta_ms(
+                    previous_timestamp_ms=previous_timestamp_ms,
+                    current_timestamp_ms=timestamp_ms,
+                )
+                if timestamp_ms is not None
+                else None
+            )
+            if timestamp_ms is not None:
+                previous_timestamp_ms = timestamp_ms
+            formatted_steps.append(
+                {
+                    "text": text,
+                    "time": step_time,
+                    "delta": step_delta,
+                }
+            )
         return formatted_steps
 
     def execution_logs_timeline_view(self, request: HttpRequest):
@@ -304,6 +386,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                 logs = [
                     {
                         "log": log,
+                        "status_badge": self._get_status_badge(log.status),
                         "steps": self._format_steps(
                             steps=list(log.steps),
                             condition_names=condition_names,
