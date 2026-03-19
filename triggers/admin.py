@@ -105,7 +105,7 @@ def create_related_filter(title):
     return type("_RelatedFilter", (RelatedOnlyFieldMultiListFilter,), {"title": title})
 
 
-class TriggerExecutionLogsForm(forms.Form):
+class TriggerRunsForm(forms.Form):
     email = forms.EmailField(label=_("User email"))
 
 
@@ -187,7 +187,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         selected_trigger_ids = sorted(queryset.values_list("pk", flat=True))
         selected_triggers = list(queryset.order_by("name"))
 
-        form = TriggerExecutionLogsForm(request.POST or None)
+        form = TriggerRunsForm(request.POST or None)
         if request.POST.get("apply") and form.is_valid():
             query_string = urlencode(
                 {
@@ -228,7 +228,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                 "background": "#fee2e2",
                 "color": "#991b1b",
             },
-            "user_not_found": {
+            "skipped": {
                 "background": "#e5e7eb",
                 "color": "#374151",
             },
@@ -387,7 +387,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         user = None
         page_obj = None
         if triggers and email:
-            execution_log_model = apps.get_model("logging", "TriggerExecutionLog")
+            execution_log_model = apps.get_model("logging", "TriggerRun")
             email_field_name = User.get_email_field_name()
             user = User.objects.filter(**{f"{email_field_name}__iexact": email}).first()
             if user:

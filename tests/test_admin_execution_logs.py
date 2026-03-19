@@ -3,7 +3,7 @@ from django.urls import reverse
 from model_bakery import baker
 import pytest
 
-from triggers.contrib.logging.models import TriggerExecutionLog
+from triggers.contrib.logging.models import TriggerRun
 from triggers.models import Trigger
 
 
@@ -67,10 +67,10 @@ def test_execution_logs_timeline_displays_run(admin_client):
     trigger = baker.make(Trigger, name="Execution Timeline Trigger")
     user = baker.make(User, email="bob@example.com")
     execution_log = baker.make(
-        TriggerExecutionLog,
+        TriggerRun,
         trigger=trigger,
         user=user,
-        status=TriggerExecutionLog.STATUS_SUCCESS,
+        status=TriggerRun.STATUS_SUCCEEDED,
         run_id="f" * 32,
         steps=[
             [1, 1, 1700000000000],
@@ -101,18 +101,18 @@ def test_execution_logs_timeline_displays_runs_for_multiple_triggers(admin_clien
     trigger_2 = baker.make(Trigger, name="Execution Timeline Trigger B")
     user = baker.make(User, email="bob@example.com")
     log_1 = baker.make(
-        TriggerExecutionLog,
+        TriggerRun,
         trigger=trigger_1,
         user=user,
-        status=TriggerExecutionLog.STATUS_SUCCESS,
+        status=TriggerRun.STATUS_SUCCEEDED,
         run_id="a" * 32,
         steps=[[1, 1, 1700000000000]],
     )
     log_2 = baker.make(
-        TriggerExecutionLog,
+        TriggerRun,
         trigger=trigger_2,
         user=user,
-        status=TriggerExecutionLog.STATUS_ACTION_FAILED,
+        status=TriggerRun.STATUS_ACTION_FAILED,
         run_id="b" * 32,
         steps=[[1, 1, 1700000000100]],
     )
@@ -141,10 +141,10 @@ def test_execution_logs_timeline_is_paginated_by_50(admin_client):
         run_id = f"{idx:032d}"
         run_ids.append(run_id)
         baker.make(
-            TriggerExecutionLog,
+            TriggerRun,
             trigger=trigger,
             user=user,
-            status=TriggerExecutionLog.STATUS_SUCCESS,
+            status=TriggerRun.STATUS_SUCCEEDED,
             run_id=run_id,
             steps=[[1, 1, 1700000000000 + idx]],
         )

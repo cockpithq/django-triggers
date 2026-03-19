@@ -5,7 +5,7 @@ import pytest
 
 from tests.app.models import SendEmailAction, Task, TaskCompletedEvent
 from tests.utils import run_on_commit
-from triggers.contrib.logging.models import TriggerExecutionLog
+from triggers.contrib.logging.models import TriggerRun
 from triggers.models import ActionCountCondition, Trigger
 
 
@@ -36,10 +36,10 @@ def test_execution_log_created_for_successful_run(user: User, trigger: Trigger):
     task.complete()
     run_on_commit()
 
-    execution_log = TriggerExecutionLog.objects.get()
+    execution_log = TriggerRun.objects.get()
     assert execution_log.user == user
     assert execution_log.trigger == trigger
-    assert execution_log.status == TriggerExecutionLog.STATUS_SUCCESS
+    assert execution_log.status == TriggerRun.STATUS_SUCCEEDED
     assert execution_log.steps
     assert any(step[0] == 3 for step in execution_log.steps)
     assert any(step[0] == 4 and step[2] == 1 for step in execution_log.steps)
@@ -54,11 +54,11 @@ def test_execution_log_created_for_missing_user(trigger: Trigger):
 
     event.handle(
         user_pk=999999,
-        trace_id='f' * 32,
+        run_id='f' * 32,
     )
 
-    execution_log = TriggerExecutionLog.objects.get(run_id='f' * 32)
-    assert execution_log.status == TriggerExecutionLog.STATUS_USER_NOT_FOUND
+    execution_log = TriggerRun.objects.get(run_id='f' * 32)
+    assert execution_log.status == TriggerRun.STATUS_SKIPPED
     assert any(step[0] == 2 and step[1] == 0 for step in execution_log.steps)
 
 
@@ -70,4 +70,4 @@ def test_execution_logs_not_created_when_disabled(user: User, trigger: Trigger):
     task.complete()
     run_on_commit()
 
-    assert not TriggerExecutionLog.objects.exists()
+    assert not TriggerRun.objects.exists()

@@ -7,4 +7,4 @@ class LoggingConfig(AppConfig):
     verbose_name = _("Trigger logging")
 
     def ready(self):
-        from triggers.contrib.logging import backends  # noqa: F401
+        from triggers.contrib.logging import receivers  # noqa: F401

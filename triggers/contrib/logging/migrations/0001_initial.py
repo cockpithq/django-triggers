@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="TriggerExecutionLog",
+            name="TriggerRun",
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("run_id", models.CharField(db_index=True, max_length=32, unique=True, verbose_name="run id")),
@@ -58,8 +58,8 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="execution_logs",
-                        related_query_name="execution_log",
+                        related_name="runs",
+                        related_query_name="run",
                         to="triggers.trigger",
                         verbose_name="trigger",
                     ),
@@ -70,29 +70,29 @@ class Migration(migrations.Migration):
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="trigger_execution_logs",
-                        related_query_name="trigger_execution_log",
+                        related_name="trigger_runs",
+                        related_query_name="trigger_run",
                         to=settings.AUTH_USER_MODEL,
                         verbose_name="user",
                     ),
                 ),
             ],
             options={
-                "verbose_name": "trigger execution log",
-                "verbose_name_plural": "trigger execution logs",
+                "verbose_name": "trigger run",
+                "verbose_name_plural": "trigger runs",
                 "ordering": ("-created_at",),
             },
         ),
         migrations.AddIndex(
-            model_name="triggerexecutionlog",
+            model_name="triggerrun",
             index=models.Index(fields=["user", "created_at"], name="triggers_co_user_id_f3c479_idx"),
         ),
         migrations.AddIndex(
-            model_name="triggerexecutionlog",
+            model_name="triggerrun",
             index=models.Index(fields=["status", "created_at"], name="triggers_co_status_ef1cf9_idx"),
         ),
         migrations.AddIndex(
-            model_name="triggerexecutionlog",
+            model_name="triggerrun",
             index=models.Index(fields=["trigger", "created_at"], name="triggers_co_trigger_267f1d_idx"),
         ),
     ]

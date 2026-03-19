@@ -1,24 +1,53 @@
+from typing import Any
+
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from triggers.models import Trigger
 
+User = get_user_model()
 
-class TriggerExecutionLog(models.Model):
+
+class TriggerRunQuerySet(models.QuerySet):
+    def for_run_id(
+        self,
+        *,
+        run_id: str,
+        event,
+        user_pk: Any,
+    ) -> "TriggerRun":
+        """Get or create run for a specific run_id."""
+        event_content_type_id = getattr(event, "polymorphic_ctype_id", None)
+        user_id = user_pk if User.objects.filter(pk=user_pk).exists() else None
+        execution_log, _created = self.get_or_create(
+            run_id=run_id,
+            defaults={
+                "user_id": user_id,
+                "trigger": event.trigger,
+                "event_content_type_id": event_content_type_id,
+                "event_object_id": event.pk,
+            },
+        )
+        return execution_log
+
+
+class TriggerRun(models.Model):
     STATUS_ENQUEUED = "enqueued"
     STATUS_STARTED = "started"
-    STATUS_SUCCESS = "success"
+    STATUS_SUCCEEDED = "succeeded"
     STATUS_CONDITIONS_FAILED = "conditions_failed"
-    STATUS_USER_NOT_FOUND = "user_not_found"
+    STATUS_SKIPPED = "skipped"
     STATUS_ACTION_FAILED = "action_failed"
     STATUS_CHOICES = (
         (STATUS_ENQUEUED, _("Enqueued")),
         (STATUS_STARTED, _("Started")),
-        (STATUS_SUCCESS, _("Success")),
+        (STATUS_SUCCEEDED, _("Succeeded")),
         (STATUS_CONDITIONS_FAILED, _("Conditions failed")),
-        (STATUS_USER_NOT_FOUND, _("User not found")),
+        (STATUS_SKIPPED, _("User not found")),
         (STATUS_ACTION_FAILED, _("Action failed")),
     )
 
@@ -32,8 +61,8 @@ class TriggerExecutionLog(models.Model):
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        related_name="trigger_execution_logs",
-        related_query_name="trigger_execution_log",
+        related_name="trigger_runs",
+        related_query_name="trigger_run",
         null=True,
         blank=True,
         verbose_name=_("user"),
@@ -41,8 +70,8 @@ class TriggerExecutionLog(models.Model):
     trigger = models.ForeignKey(
         to=Trigger,
         on_delete=models.SET_NULL,
-        related_name="execution_logs",
-        related_query_name="execution_log",
+        related_name="runs",
+        related_query_name="run",
         null=True,
         blank=True,
         verbose_name=_("trigger"),
@@ -61,9 +90,11 @@ class TriggerExecutionLog(models.Model):
     started_at = models.DateTimeField(_("started at"), null=True, blank=True)
     finished_at = models.DateTimeField(_("finished at"), null=True, blank=True)
 
+    objects = TriggerRunQuerySet.as_manager()
+
     class Meta:
-        verbose_name = _("trigger execution log")
-        verbose_name_plural = _("trigger execution logs")
+        verbose_name = _("trigger run")
+        verbose_name_plural = _("trigger runs")
         ordering = ("-created_at",)
         indexes = (
             models.Index(fields=("user", "created_at")),
@@ -73,3 +104,10 @@ class TriggerExecutionLog(models.Model):
 
     def __str__(self):
         return f"{self.run_id} ({self.status})"
+
+    def append_step(self, step):
+        """Append a step to this execution log with timestamp."""
+        timestamp_ms = int(timezone.now().timestamp() * 1000)
+        steps = list(self.steps)
+        steps.append([*step, timestamp_ms])
+        TriggerRun.objects.filter(pk=self.pk).update(steps=steps)

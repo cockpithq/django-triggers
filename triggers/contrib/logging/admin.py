@@ -1,11 +1,11 @@
 from django.contrib import admin
 
-from triggers.contrib.logging.models import TriggerExecutionLog
+from triggers.contrib.logging.models import TriggerRun
 from triggers.models import User
 
 
-@admin.register(TriggerExecutionLog)
-class TriggerExecutionLogAdmin(admin.ModelAdmin):
+@admin.register(TriggerRun)
+class TriggerRunAdmin(admin.ModelAdmin):
     list_display = (
         "run_id",
         "status",
