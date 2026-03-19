@@ -113,11 +113,6 @@ def on_action_failed(
             0,
             error.__class__.__name__,
         ])
-        # Update status immediately to ensure it's saved even if exception is raised
-        TriggerRun.objects.filter(run_id=run_id).update(
-            status=TriggerRun.STATUS_ACTION_FAILED,
-            finished_at=timezone.now(),
-        )
 
 
 @receiver(Event.handled)
