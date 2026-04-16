@@ -7,6 +7,12 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from triggers.constants import (
+    RESULT_ACTION_FAILED,
+    RESULT_CONDITIONS_FAILED,
+    RESULT_SKIPPED,
+    RESULT_SUCCEEDED,
+)
 from triggers.models import Trigger
 
 User = get_user_model()
@@ -38,10 +44,10 @@ class TriggerRunQuerySet(models.QuerySet):
 class TriggerRun(models.Model):
     STATUS_ENQUEUED = "enqueued"
     STATUS_STARTED = "started"
-    STATUS_SUCCEEDED = "succeeded"
-    STATUS_CONDITIONS_FAILED = "conditions_failed"
-    STATUS_SKIPPED = "skipped"
-    STATUS_ACTION_FAILED = "action_failed"
+    STATUS_SUCCEEDED = RESULT_SUCCEEDED
+    STATUS_CONDITIONS_FAILED = RESULT_CONDITIONS_FAILED
+    STATUS_SKIPPED = RESULT_SKIPPED
+    STATUS_ACTION_FAILED = RESULT_ACTION_FAILED
     STATUS_CHOICES = (
         (STATUS_ENQUEUED, _("Enqueued")),
         (STATUS_STARTED, _("Started")),

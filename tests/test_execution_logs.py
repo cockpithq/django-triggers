@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.test import override_settings
 from model_bakery import baker
@@ -71,3 +73,17 @@ def test_execution_logs_not_created_when_disabled(user: User, trigger: Trigger):
     run_on_commit()
 
     assert not TriggerRun.objects.exists()
+
+
+@pytest.mark.django_db()
+@override_settings(TRIGGERS_EXECUTION_LOGGING_ENABLED=True)
+def test_execution_log_created_for_action_failure(user: User, trigger: Trigger):
+    task = baker.make(Task, user=user, is_important=True)
+
+    with patch.object(SendEmailAction, "perform", side_effect=RuntimeError("smtp down")):
+        task.complete()
+        run_on_commit()
+
+    execution_log = TriggerRun.objects.get()
+    assert execution_log.status == TriggerRun.STATUS_ACTION_FAILED
+    assert any(step[0] == 4 and step[2] == 0 for step in execution_log.steps)

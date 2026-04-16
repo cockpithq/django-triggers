@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import datetime
-from typing import Any, Dict, Generator, Mapping, Type
+from typing import Any, Dict, Generator, Mapping, Optional, Type
 import uuid
 
 from django.conf import settings
@@ -11,6 +11,13 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
+
+from triggers.constants import (
+    RESULT_ACTION_FAILED,
+    RESULT_CONDITIONS_FAILED,
+    RESULT_SKIPPED,
+    RESULT_SUCCEEDED,
+)
 
 RUN_ID_CONTEXT_KEY = "_triggers_run_id"
 
@@ -67,39 +74,49 @@ class Trigger(PolymorphicModel):
             if not is_satisfied:
                 is_allowed = False
         if user and is_allowed:
-            with Activity.lock(user, self):
-                for action in self.actions.all():
-                    try:
-                        action.perform(user, context)
-                    except Exception as error:
-                        emit(
-                            Action.failed,
-                            sender=self.__class__,
-                            run_id=run_id,
-                            trigger=self,
-                            user_pk=user.pk,
-                            action=action,
-                            error=error,
-                        )
-                        emit(
-                            Event.handled,
-                            sender=self.__class__,
-                            run_id=run_id,
-                            event=None,
-                            trigger=self,
-                            user_pk=user.pk,
-                            result="action_failed",
-                        )
-                        raise
-                    else:
-                        emit(
-                            Action.performed,
-                            sender=self.__class__,
-                            run_id=run_id,
-                            trigger=self,
-                            user_pk=user.pk,
-                            action=action,
-                        )
+            action_error: Optional[Exception] = None
+            failed_action = None
+            try:
+                with Activity.lock(user, self):
+                    for action in self.actions.all():
+                        try:
+                            action.perform(user, context)
+                        except Exception as error:
+                            action_error = error
+                            failed_action = action
+                            raise
+                        else:
+                            emit(
+                                Action.performed,
+                                sender=self.__class__,
+                                run_id=run_id,
+                                trigger=self,
+                                user_pk=user.pk,
+                                action=action,
+                            )
+            except Exception:
+                pass  # stored in action_error; signals emitted below outside the atomic block
+
+            if action_error is not None:
+                emit(
+                    Action.failed,
+                    sender=self.__class__,
+                    run_id=run_id,
+                    trigger=self,
+                    user_pk=user.pk,
+                    action=failed_action,
+                    error=action_error,
+                )
+                emit(
+                    Event.handled,
+                    sender=self.__class__,
+                    run_id=run_id,
+                    event=None,
+                    trigger=self,
+                    user_pk=user.pk,
+                    result=RESULT_ACTION_FAILED,
+                )
+                raise action_error
             emit(
                 Event.handled,
                 sender=self.__class__,
@@ -107,7 +124,7 @@ class Trigger(PolymorphicModel):
                 event=None,
                 trigger=self,
                 user_pk=user.pk,
-                result="succeeded",
+                result=RESULT_SUCCEEDED,
             )
         elif user:
             emit(
@@ -117,7 +134,7 @@ class Trigger(PolymorphicModel):
                 event=None,
                 trigger=self,
                 user_pk=user.pk,
-                result="conditions_failed",
+                result=RESULT_CONDITIONS_FAILED,
             )
 
 
@@ -277,7 +294,7 @@ class Event(PolymorphicModel):
                 event=self,
                 trigger=self.trigger,
                 user_pk=user_pk,
-                result="skipped",
+                result=RESULT_SKIPPED,
             )
 
 
