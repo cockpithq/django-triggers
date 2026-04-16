@@ -26,9 +26,9 @@ class Migration(migrations.Migration):
                         choices=[
                             ("enqueued", "Enqueued"),
                             ("started", "Started"),
-                            ("success", "Success"),
+                            ("succeeded", "Succeeded"),
                             ("conditions_failed", "Conditions failed"),
-                            ("user_not_found", "User not found"),
+                            ("skipped", "User not found"),
                             ("action_failed", "Action failed"),
                         ],
                         default="enqueued",

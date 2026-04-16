@@ -216,7 +216,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
 
     def _get_status_badge(self, status: str) -> Dict[str, str]:
         status_styles = {
-            "success": {
+            "succeeded": {
                 "background": "#dcfce7",
                 "color": "#166534",
             },
@@ -387,7 +387,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         user = None
         page_obj = None
         if triggers and email:
-            execution_log_model = apps.get_model("logging", "TriggerRun")
+            execution_log_model = apps.get_model("triggers_logging", "TriggerRun")
             email_field_name = User.get_email_field_name()
             user = User.objects.filter(**{f"{email_field_name}__iexact": email}).first()
             if user:
