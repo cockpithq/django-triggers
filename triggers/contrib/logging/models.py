@@ -114,7 +114,9 @@ class TriggerRun(models.Model):
     def append_step(self, step):
         """Append a step to this execution log with timestamp."""
         timestamp_ms = int(timezone.now().timestamp() * 1000)
-        current_steps = TriggerRun.objects.filter(pk=self.pk).values_list("steps", flat=True).first()
+        current_steps = (
+            TriggerRun.objects.filter(pk=self.pk).values_list("steps", flat=True).first()
+        )
         steps = list(current_steps or [])
         steps.append([*step, timestamp_ms])
         TriggerRun.objects.filter(pk=self.pk).update(steps=steps)
