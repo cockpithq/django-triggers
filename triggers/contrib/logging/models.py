@@ -2,7 +2,6 @@ from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -13,7 +12,7 @@ from triggers.constants import (
     RESULT_SKIPPED,
     RESULT_SUCCEEDED,
 )
-from triggers.models import Trigger
+from triggers.models import Event, Trigger
 
 User = get_user_model()
 
@@ -27,15 +26,13 @@ class TriggerRunQuerySet(models.QuerySet):
         user_pk: Any,
     ) -> "TriggerRun":
         """Get or create run for a specific run_id."""
-        event_content_type_id = getattr(event, "polymorphic_ctype_id", None)
         user_id = user_pk if User.objects.filter(pk=user_pk).exists() else None
         execution_log, _created = self.get_or_create(
             run_id=run_id,
             defaults={
                 "user_id": user_id,
                 "trigger": event.trigger,
-                "event_content_type_id": event_content_type_id,
-                "event_object_id": event.pk,
+                "event": event,
             },
         )
         return execution_log
@@ -82,16 +79,16 @@ class TriggerRun(models.Model):
         blank=True,
         verbose_name=_("trigger"),
     )
-    event_content_type = models.ForeignKey(
-        to=ContentType,
+    event = models.ForeignKey(
+        to=Event,
         on_delete=models.SET_NULL,
-        related_name="+",
+        related_name="trigger_runs",
+        related_query_name="trigger_run",
         null=True,
         blank=True,
-        verbose_name=_("event content type"),
+        verbose_name=_("event"),
     )
-    event_object_id = models.BigIntegerField(_("event object id"), null=True, blank=True)
-    steps = models.JSONField(_("steps"), default=list, blank=True)
+    timeline = models.JSONField(_("timeline"), default=list, blank=True)
     created_at = models.DateTimeField(_("created at"), auto_now_add=True)
     started_at = models.DateTimeField(_("started at"), null=True, blank=True)
     finished_at = models.DateTimeField(_("finished at"), null=True, blank=True)
@@ -112,11 +109,11 @@ class TriggerRun(models.Model):
         return f"{self.run_id} ({self.status})"
 
     def append_step(self, step):
-        """Append a step to this execution log with timestamp."""
+        """Append a step to the timeline with timestamp."""
         timestamp_ms = int(timezone.now().timestamp() * 1000)
-        current_steps = (
-            TriggerRun.objects.filter(pk=self.pk).values_list("steps", flat=True).first()
+        current_timeline = (
+            TriggerRun.objects.filter(pk=self.pk).values_list("timeline", flat=True).first()
         )
-        steps = list(current_steps or [])
-        steps.append([*step, timestamp_ms])
-        TriggerRun.objects.filter(pk=self.pk).update(steps=steps)
+        timeline = list(current_timeline or [])
+        timeline.append([*step, timestamp_ms])
+        TriggerRun.objects.filter(pk=self.pk).update(timeline=timeline)

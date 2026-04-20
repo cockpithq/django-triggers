@@ -11,20 +11,18 @@ class TriggerRunAdmin(admin.ModelAdmin):
         "status",
         "user",
         "trigger",
-        "event_content_type",
-        "event_object_id",
+        "event",
         "created_at",
         "finished_at",
     )
-    list_filter = ("status", "trigger", "event_content_type")
+    list_filter = ("status", "trigger")
     readonly_fields = (
         "run_id",
         "status",
         "user",
         "trigger",
-        "event_content_type",
-        "event_object_id",
-        "steps",
+        "event",
+        "timeline",
         "created_at",
         "started_at",
         "finished_at",

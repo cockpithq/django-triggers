@@ -42,10 +42,10 @@ def test_execution_log_created_for_successful_run(user: User, trigger: Trigger):
     assert execution_log.user == user
     assert execution_log.trigger == trigger
     assert execution_log.status == TriggerRun.STATUS_SUCCEEDED
-    assert execution_log.steps
-    assert any(step[0] == 3 for step in execution_log.steps)
-    assert any(step[0] == 4 and step[2] == 1 for step in execution_log.steps)
-    assert all(isinstance(step[-1], int) for step in execution_log.steps)
+    assert execution_log.timeline
+    assert any(step[0] == 3 for step in execution_log.timeline)
+    assert any(step[0] == 4 and step[2] == 1 for step in execution_log.timeline)
+    assert all(isinstance(step[-1], int) for step in execution_log.timeline)
 
 
 @pytest.mark.django_db()
@@ -61,7 +61,7 @@ def test_execution_log_created_for_missing_user(trigger: Trigger):
 
     execution_log = TriggerRun.objects.get(run_id='f' * 32)
     assert execution_log.status == TriggerRun.STATUS_SKIPPED
-    assert any(step[0] == 2 and step[1] == 0 for step in execution_log.steps)
+    assert any(step[0] == 2 and step[1] == 0 for step in execution_log.timeline)
 
 
 @pytest.mark.django_db()
@@ -86,4 +86,4 @@ def test_execution_log_created_for_action_failure(user: User, trigger: Trigger):
 
     execution_log = TriggerRun.objects.get()
     assert execution_log.status == TriggerRun.STATUS_ACTION_FAILED
-    assert any(step[0] == 4 and step[2] == 0 for step in execution_log.steps)
+    assert any(step[0] == 4 and step[2] == 0 for step in execution_log.timeline)

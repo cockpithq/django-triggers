@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("contenttypes", "0002_remove_content_type_name"),
         ("triggers", "0006_remove_action_trigger_old"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
@@ -36,20 +35,20 @@ class Migration(migrations.Migration):
                         verbose_name="status",
                     ),
                 ),
-                ("event_object_id", models.BigIntegerField(blank=True, null=True, verbose_name="event object id")),
-                ("steps", models.JSONField(blank=True, default=list, verbose_name="steps")),
+                ("timeline", models.JSONField(blank=True, default=list, verbose_name="timeline")),
                 ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="created at")),
                 ("started_at", models.DateTimeField(blank=True, null=True, verbose_name="started at")),
                 ("finished_at", models.DateTimeField(blank=True, null=True, verbose_name="finished at")),
                 (
-                    "event_content_type",
+                    "event",
                     models.ForeignKey(
                         blank=True,
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="+",
-                        to="contenttypes.contenttype",
-                        verbose_name="event content type",
+                        related_name="trigger_runs",
+                        related_query_name="trigger_run",
+                        to="triggers.event",
+                        verbose_name="event",
                     ),
                 ),
                 (
@@ -85,14 +84,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="triggerrun",
-            index=models.Index(fields=["user", "created_at"], name="triggers_co_user_id_f3c479_idx"),
+            index=models.Index(fields=["user", "created_at"], name="triggers_lo_user_id_idx"),
         ),
         migrations.AddIndex(
             model_name="triggerrun",
-            index=models.Index(fields=["status", "created_at"], name="triggers_co_status_ef1cf9_idx"),
+            index=models.Index(fields=["status", "created_at"], name="triggers_lo_status_idx"),
         ),
         migrations.AddIndex(
             model_name="triggerrun",
-            index=models.Index(fields=["trigger", "created_at"], name="triggers_co_trigger_267f1d_idx"),
+            index=models.Index(fields=["trigger", "created_at"], name="triggers_lo_trigger_idx"),
         ),
     ]

@@ -421,7 +421,7 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                         "log": log,
                         "status_badge": self._get_status_badge(log.status),
                         "steps": self._format_steps(
-                            steps=list(log.steps),
+                            steps=list(log.timeline),
                             condition_names=condition_names_by_trigger.get(
                                 cast(int, log.trigger_id),
                                 default_names,

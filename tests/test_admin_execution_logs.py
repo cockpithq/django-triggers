@@ -72,7 +72,7 @@ def test_execution_logs_timeline_displays_run(admin_client):
         user=user,
         status=TriggerRun.STATUS_SUCCEEDED,
         run_id="f" * 32,
-        steps=[
+        timeline=[
             [1, 1, 1700000000000],
             [2, 1, 1700000000100],
             [3, 100, 1, 1700000000200],
@@ -106,7 +106,7 @@ def test_execution_logs_timeline_displays_runs_for_multiple_triggers(admin_clien
         user=user,
         status=TriggerRun.STATUS_SUCCEEDED,
         run_id="a" * 32,
-        steps=[[1, 1, 1700000000000]],
+        timeline=[[1, 1, 1700000000000]],
     )
     log_2 = baker.make(
         TriggerRun,
@@ -114,7 +114,7 @@ def test_execution_logs_timeline_displays_runs_for_multiple_triggers(admin_clien
         user=user,
         status=TriggerRun.STATUS_ACTION_FAILED,
         run_id="b" * 32,
-        steps=[[1, 1, 1700000000100]],
+        timeline=[[1, 1, 1700000000100]],
     )
 
     response = admin_client.get(
@@ -146,7 +146,7 @@ def test_execution_logs_timeline_is_paginated_by_50(admin_client):
             user=user,
             status=TriggerRun.STATUS_SUCCEEDED,
             run_id=run_id,
-            steps=[[1, 1, 1700000000000 + idx]],
+            timeline=[[1, 1, 1700000000000 + idx]],
         )
 
     first_page_response = admin_client.get(
