@@ -19,12 +19,16 @@ from triggers.constants import (
     RESULT_SUCCEEDED,
 )
 
-RUN_ID_CONTEXT_KEY = "_triggers_run_id"
 
-
-def emit(signal: Signal, sender, **kwargs):
-    """Emit a signal robustly to ensure observers never break trigger execution."""
-    signal.send_robust(sender=sender, **kwargs)
+def _send_trigger_signal(
+    signal: Signal,
+    sender: type,
+    event: 'Event',
+    run_id: str,
+    **kwargs,
+) -> None:
+    """Send a trigger signal robustly so observers never break trigger execution."""
+    signal.send_robust(sender=sender, event=event, run_id=run_id, **kwargs)
 
 
 User = get_user_model()
@@ -57,14 +61,15 @@ class Trigger(PolymorphicModel):
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
 
-    def on_event(self, user, context: Mapping[str, Any], run_id: str):
+    def on_event(self, user, context: Mapping[str, Any], event: 'Event', run_id: str):
         conditions = self.conditions.all()
         is_allowed = True
         for condition in conditions:
             is_satisfied = condition.is_satisfied(user)
-            emit(
+            _send_trigger_signal(
                 Condition.checked,
                 sender=self.__class__,
+                event=event,
                 run_id=run_id,
                 trigger=self,
                 user_pk=user.pk,
@@ -86,9 +91,10 @@ class Trigger(PolymorphicModel):
                             failed_action = action
                             raise
                         else:
-                            emit(
+                            _send_trigger_signal(
                                 Action.performed,
                                 sender=self.__class__,
+                                event=event,
                                 run_id=run_id,
                                 trigger=self,
                                 user_pk=user.pk,
@@ -98,40 +104,41 @@ class Trigger(PolymorphicModel):
                 pass  # stored in action_error; signals emitted below outside the atomic block
 
             if action_error is not None:
-                emit(
+                _send_trigger_signal(
                     Action.failed,
                     sender=self.__class__,
+                    event=event,
                     run_id=run_id,
                     trigger=self,
                     user_pk=user.pk,
                     action=failed_action,
                     error=action_error,
                 )
-                emit(
+                _send_trigger_signal(
                     Event.handled,
                     sender=self.__class__,
+                    event=event,
                     run_id=run_id,
-                    event=None,
                     trigger=self,
                     user_pk=user.pk,
                     result=RESULT_ACTION_FAILED,
                 )
                 raise action_error
-            emit(
+            _send_trigger_signal(
                 Event.handled,
                 sender=self.__class__,
+                event=event,
                 run_id=run_id,
-                event=None,
                 trigger=self,
                 user_pk=user.pk,
                 result=RESULT_SUCCEEDED,
             )
         elif user:
-            emit(
+            _send_trigger_signal(
                 Event.handled,
                 sender=self.__class__,
+                event=event,
                 run_id=run_id,
-                event=None,
                 trigger=self,
                 user_pk=user.pk,
                 result=RESULT_CONDITIONS_FAILED,
@@ -248,15 +255,13 @@ class Event(PolymorphicModel):
             prefiltered_user_queryset = self.trigger.filter_user_queryset(user_queryset)
             for user_pk in prefiltered_user_queryset.values_list('pk', flat=True).iterator():
                 run_id = uuid.uuid4().hex
-                event_context = dict(kwargs)
-                event_context[RUN_ID_CONTEXT_KEY] = run_id
-                emit(
+                _send_trigger_signal(
                     Event.fired,
                     sender=self.__class__,
-                    run_id=run_id,
                     event=self,
+                    run_id=run_id,
                     user_pk=user_pk,
-                    **event_context,
+                    **kwargs,
                 )
 
     def fire_single(self, user_pk: Any, **kwargs):
@@ -264,34 +269,34 @@ class Event(PolymorphicModel):
 
     def handle(self, user_pk, run_id: str = "", **context):
         run_id = run_id or uuid.uuid4().hex
-        emit(
+        _send_trigger_signal(
             self.received,
             sender=self.__class__,
-            run_id=run_id,
             event=self,
+            run_id=run_id,
             user_pk=user_pk,
             **context,
         )
         # Filter by conditions again (conditions may have changed between fire() and handle())
         user_queryset = self.trigger.filter_user_queryset(User.objects.filter(pk=user_pk))
         user = user_queryset.first()
-        emit(
+        _send_trigger_signal(
             self.user_resolved,
             sender=self.__class__,
-            run_id=run_id,
             event=self,
+            run_id=run_id,
             user_pk=user_pk,
             is_found=bool(user),
         )
         if user:
             user_context = self.get_user_context(user, context)
-            self.trigger.on_event(user, user_context, run_id=run_id)
+            self.trigger.on_event(user, context=user_context, event=self, run_id=run_id)
         else:
-            emit(
+            _send_trigger_signal(
                 self.handled,
                 sender=self.__class__,
-                run_id=run_id,
                 event=self,
+                run_id=run_id,
                 trigger=self.trigger,
                 user_pk=user_pk,
                 result=RESULT_SKIPPED,

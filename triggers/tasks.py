@@ -1,21 +1,19 @@
 from celery import shared_task
 from django.dispatch import Signal, receiver
 
-from triggers.models import RUN_ID_CONTEXT_KEY, Event
+from triggers.models import Event
 
 
 @receiver(Event.fired)
-def on_event_fired(sender, signal: Signal, event: Event, user_pk, **kwargs):
+def on_event_fired(sender, signal: Signal, event: Event, user_pk, run_id: str, **kwargs):
     handle_event.apply_async(
         args=(event.pk, user_pk),
-        kwargs=kwargs,
+        kwargs={"run_id": run_id, **kwargs},
         countdown=event.delay.total_seconds(),
     )
 
 
 @shared_task
-def handle_event(event_pk, user_pk, **context):
+def handle_event(event_pk, user_pk, run_id: str = "", **context):
     event: Event = Event.objects.get(pk=event_pk)
-    # Extract run_id from context (either from RUN_ID_CONTEXT_KEY or 'run_id' key)
-    run_id = context.pop(RUN_ID_CONTEXT_KEY, context.pop('run_id', ''))
     event.handle(user_pk, run_id=run_id, **context)

@@ -20,8 +20,8 @@ def _is_enabled() -> bool:
 @receiver(Event.fired)
 def on_event_fired(
     sender,
-    run_id: str,
     event,
+    run_id: str,
     user_pk: Any,
     **kwargs,
 ):
@@ -37,8 +37,8 @@ def on_event_fired(
 @receiver(Event.received)
 def on_event_received(
     sender,
-    run_id: str,
     event,
+    run_id: str,
     user_pk: Any,
     **kwargs,
 ):
