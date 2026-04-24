@@ -75,7 +75,7 @@ def test_execution_logs_timeline_displays_run(admin_client):
         timeline=[
             [1, 1, 1700000000000],
             [2, 1, 1700000000100],
-            [3, 100, 1, 1700000000200],
+            [3, 1, None, 1700000000200],
             [4, 200, 1, 1700000000400],
         ],
     )

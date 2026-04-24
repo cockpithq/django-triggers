@@ -62,22 +62,23 @@ class Trigger(PolymorphicModel):
         return user_queryset
 
     def on_event(self, user, context: Mapping[str, Any], event: 'Event', run_id: str):
-        conditions = self.conditions.all()
         is_allowed = True
-        for condition in conditions:
-            is_satisfied = condition.is_satisfied(user)
-            _send_trigger_signal(
-                Condition.checked,
-                sender=self.__class__,
-                event=event,
-                run_id=run_id,
-                trigger=self,
-                user_pk=user.pk,
-                condition=condition,
-                is_satisfied=is_satisfied,
-            )
-            if not is_satisfied:
+        failed_condition = None
+        for condition in self.conditions.all():
+            if not condition.is_satisfied(user):
                 is_allowed = False
+                if failed_condition is None:
+                    failed_condition = condition
+        _send_trigger_signal(
+            Condition.checked,
+            sender=self.__class__,
+            event=event,
+            run_id=run_id,
+            trigger=self,
+            user_pk=user.pk,
+            is_satisfied=is_allowed,
+            failed_condition=failed_condition,
+        )
         if user and is_allowed:
             action_error: Optional[Exception] = None
             failed_action = None

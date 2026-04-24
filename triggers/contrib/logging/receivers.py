@@ -70,18 +70,20 @@ def on_user_resolved(sender, run_id: str, event, user_pk: Any, is_found: bool, *
 @receiver(Condition.checked)
 def on_condition_checked(
     sender,
+    event,
     run_id: str,
     trigger,
     user_pk: Any,
-    condition,
     is_satisfied: bool,
+    failed_condition,
     **kwargs,
 ):
     if not _is_enabled():
         return
     execution_log = TriggerRun.objects.filter(run_id=run_id).first()
     if execution_log:
-        execution_log.append_step([STEP_CONDITION_CHECKED, condition.pk, int(is_satisfied)])
+        failed_pk = failed_condition.pk if failed_condition is not None else None
+        execution_log.append_step([STEP_CONDITION_CHECKED, int(is_satisfied), failed_pk])
 
 
 @receiver(Action.performed)

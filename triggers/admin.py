@@ -296,17 +296,22 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
                 text = str(_("User resolved: %(status)s")) % {
                     "status": _("yes") if user_found else _("no")
                 }
-            elif step_type == 3 and len(step) > 2:
-                condition_id = step[1]
-                condition_name = condition_names.get(
-                    condition_id,
-                    str(_("Condition #%(id)s")) % {"id": condition_id},
-                )
-                is_satisfied = bool(step[2])
-                text = str(_("%(condition)s -> %(status)s")) % {
-                    "condition": condition_name,
-                    "status": _("passed") if is_satisfied else _("failed"),
-                }
+            elif step_type == 3 and len(step) > 1:
+                is_satisfied = bool(step[1])
+                if is_satisfied:
+                    text = str(_("All conditions passed"))
+                else:
+                    failed_condition_id = step[2] if len(step) > 2 else None
+                    if failed_condition_id is not None:
+                        condition_name = condition_names.get(
+                            failed_condition_id,
+                            str(_("Condition #%(id)s")) % {"id": failed_condition_id},
+                        )
+                        text = str(_("Conditions failed: %(condition)s")) % {
+                            "condition": condition_name,
+                        }
+                    else:
+                        text = str(_("Conditions failed"))
             elif step_type == 4 and len(step) > 2:
                 action_id = step[1]
                 action_name = action_names.get(
