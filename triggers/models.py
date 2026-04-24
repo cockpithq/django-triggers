@@ -12,12 +12,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
 
-from triggers.constants import (
-    RESULT_ACTION_FAILED,
-    RESULT_CONDITIONS_FAILED,
-    RESULT_SKIPPED,
-    RESULT_SUCCEEDED,
-)
+from triggers.constants import TriggerOutcome
 
 
 def _send_trigger_signal(
@@ -122,7 +117,7 @@ class Trigger(PolymorphicModel):
                     run_id=run_id,
                     trigger=self,
                     user_pk=user.pk,
-                    result=RESULT_ACTION_FAILED,
+                    trigger_outcome=TriggerOutcome.ACTION_FAILED,
                 )
                 raise action_error
             _send_trigger_signal(
@@ -132,7 +127,7 @@ class Trigger(PolymorphicModel):
                 run_id=run_id,
                 trigger=self,
                 user_pk=user.pk,
-                result=RESULT_SUCCEEDED,
+                trigger_outcome=TriggerOutcome.SUCCEEDED,
             )
         elif user:
             _send_trigger_signal(
@@ -142,7 +137,7 @@ class Trigger(PolymorphicModel):
                 run_id=run_id,
                 trigger=self,
                 user_pk=user.pk,
-                result=RESULT_CONDITIONS_FAILED,
+                trigger_outcome=TriggerOutcome.SKIPPED_FOR_QUERYSET,
             )
 
 
@@ -300,7 +295,7 @@ class Event(PolymorphicModel):
                 run_id=run_id,
                 trigger=self.trigger,
                 user_pk=user_pk,
-                result=RESULT_SKIPPED,
+                trigger_outcome=TriggerOutcome.SKIPPED_FOR_INSTANCE,
             )
 
 

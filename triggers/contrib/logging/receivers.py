@@ -4,8 +4,16 @@ from django.conf import settings
 from django.dispatch import receiver
 from django.utils import timezone
 
+from triggers.constants import TriggerOutcome
 from triggers.contrib.logging.models import TriggerRun
 from triggers.models import Action, Condition, Event
+
+_OUTCOME_TO_STATUS = {
+    TriggerOutcome.SUCCEEDED: TriggerRun.STATUS_SUCCEEDED,
+    TriggerOutcome.ACTION_FAILED: TriggerRun.STATUS_ACTION_FAILED,
+    TriggerOutcome.SKIPPED_FOR_INSTANCE: TriggerRun.STATUS_SKIPPED,
+    TriggerOutcome.SKIPPED_FOR_QUERYSET: TriggerRun.STATUS_CONDITIONS_FAILED,
+}
 
 STEP_EVENT_STARTED = 1
 STEP_USER_RESOLVED = 2
@@ -118,10 +126,19 @@ def on_action_failed(
 
 
 @receiver(Event.handled)
-def on_event_handled(sender, run_id: str, event, trigger, user_pk: Any, result: str, **kwargs):
+def on_event_handled(
+    sender,
+    event,
+    run_id: str,
+    trigger,
+    user_pk: Any,
+    trigger_outcome: TriggerOutcome,
+    **kwargs,
+):
     if not _is_enabled():
         return
+    status = _OUTCOME_TO_STATUS[trigger_outcome]
     TriggerRun.objects.filter(run_id=run_id).update(
-        status=result,
+        status=status,
         finished_at=timezone.now(),
     )

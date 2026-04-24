@@ -1,4 +1,8 @@
-RESULT_SUCCEEDED = "succeeded"
-RESULT_SKIPPED = "skipped"
-RESULT_CONDITIONS_FAILED = "conditions_failed"
-RESULT_ACTION_FAILED = "action_failed"
+from enum import Enum, auto
+
+
+class TriggerOutcome(Enum):
+    SUCCEEDED = auto()
+    ACTION_FAILED = auto()
+    SKIPPED_FOR_INSTANCE = auto()
+    SKIPPED_FOR_QUERYSET = auto()
