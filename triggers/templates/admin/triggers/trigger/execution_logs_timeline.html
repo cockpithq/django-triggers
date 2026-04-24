@@ -1,0 +1,96 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <form
+    method="get"
+    style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"
+  >
+    {% if trigger %}
+      <input type="hidden" name="trigger_id" value="{{ trigger.pk }}" />
+    {% elif trigger_ids_query %}
+      <input type="hidden" name="trigger_ids" value="{{ trigger_ids_query }}" />
+    {% endif %}
+    <label for="id_email">{% trans "User email" %}:</label>
+    <input id="id_email" type="email" name="email" value="{{ email }}" required />
+    <button
+      type="submit"
+      style="min-width: 84px; padding: 6px 12px; border: 1px solid #205067; border-radius: 4px; background: #417690; color: #fff; font-weight: 600; cursor: pointer;"
+    >
+      {% trans "Filter" %}
+    </button>
+  </form>
+
+  {% if trigger %}
+    <p>
+      <strong>{% trans "Trigger" %}:</strong> {{ trigger.name }}
+    </p>
+  {% elif triggers %}
+    <p>
+      <strong>{% trans "Triggers" %}:</strong>
+      {% for trigger_item in triggers %}
+        {{ trigger_item.name }}{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </p>
+  {% endif %}
+
+  {% if email and not user %}
+    <p>{% trans "No user found for this email." %}</p>
+  {% endif %}
+
+  {% if logs %}
+    {% for item in logs %}
+      <div style="padding: 12px; margin-bottom: 10px; border: 1px solid #d9d9d9; border-radius: 6px;">
+        <div>
+          <strong>{{ item.log.created_at }}</strong>
+          —
+          <span
+            style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: {{ item.status_badge.background }}; color: {{ item.status_badge.color }};"
+          >
+            {{ item.log.get_status_display }}
+          </span>
+          {% if item.log.trigger %}
+            — {{ item.log.trigger.name }}
+          {% endif %}
+          — <code>{{ item.log.run_id }}</code>
+        </div>
+        {% if item.steps %}
+          <ul style="margin-top: 8px;">
+            {% for step in item.steps %}
+              <li>
+                {{ step.text }}
+                {% if step.time %}
+                  <span style="color: #6b7280;">({{ step.time }}{% if step.delta %}, {{ step.delta }}{% endif %})</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>{% trans "No details available." %}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% elif user %}
+    <p>{% trans "No execution logs for selected trigger and user." %}</p>
+  {% endif %}
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="paginator">
+      <span>
+        {% blocktranslate with page_number=page_obj.number total_pages=page_obj.paginator.num_pages %}
+          Page {{ page_number }} of {{ total_pages }}
+        {% endblocktranslate %}
+      </span>
+      {% if page_obj.has_previous %}
+        <a href="?{{ pagination_query }}&page={{ page_obj.previous_page_number }}">{% trans "previous" %}</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?{{ pagination_query }}&page={{ page_obj.next_page_number }}">{% trans "next" %}</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <p style="margin-top: 16px;">
+    <a href="{% url 'admin:triggers_trigger_changelist' %}">{% trans "Back to triggers" %}</a>
+  </p>
+{% endblock %}

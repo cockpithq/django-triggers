@@ -1,0 +1,39 @@
+from django.contrib import admin
+
+from triggers.contrib.logging.models import TriggerRun
+from triggers.models import User
+
+
+@admin.register(TriggerRun)
+class TriggerRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "run_id",
+        "status",
+        "user",
+        "trigger",
+        "event",
+        "created_at",
+        "finished_at",
+    )
+    list_filter = ("status", "trigger")
+    readonly_fields = (
+        "run_id",
+        "status",
+        "user",
+        "trigger",
+        "event",
+        "timeline",
+        "created_at",
+        "started_at",
+        "finished_at",
+    )
+    search_fields = tuple(
+        {
+            "run_id",
+            f"=user__{User.USERNAME_FIELD}",
+            f"=user__{User.get_email_field_name()}",
+        }
+    )
+
+    def has_add_permission(self, request, obj=None):
+        return False

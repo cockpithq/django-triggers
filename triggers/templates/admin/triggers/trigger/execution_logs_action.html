@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  {% if triggers|length == 1 %}
+    <p>
+      {% blocktranslate with trigger_name=triggers.0.name %}
+        Trigger: {{ trigger_name }}
+      {% endblocktranslate %}
+    </p>
+  {% else %}
+    <p>
+      {% blocktranslate with trigger_count=triggers|length %}
+        Selected triggers: {{ trigger_count }}
+      {% endblocktranslate %}
+    </p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {% for obj in queryset %}
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}" />
+    {% endfor %}
+    <input type="hidden" name="action" value="{{ action_name }}" />
+    <input type="hidden" name="apply" value="1" />
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      {{ form.email.label_tag }}
+      {{ form.email }}
+      <button
+        type="submit"
+        style="min-width: 132px; padding: 6px 12px; border: 1px solid #205067; border-radius: 4px; background: #417690; color: #fff; font-weight: 600; cursor: pointer;"
+      >
+        {% trans "Show timeline" %}
+      </button>
+    </div>
+    {% if form.email.errors %}
+      {{ form.email.errors }}
+    {% endif %}
+  </form>
+{% endblock %}

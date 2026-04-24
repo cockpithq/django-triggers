@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import datetime
-from typing import Any, Dict, Generator, Mapping, Type
+from typing import Any, Dict, Generator, Mapping, Optional, Type
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,6 +11,20 @@ from django.dispatch import Signal
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from polymorphic.models import PolymorphicModel
+
+from triggers.constants import TriggerOutcome
+
+
+def _send_trigger_signal(
+    signal: Signal,
+    sender: type,
+    event: 'Event',
+    run_id: str,
+    **kwargs,
+) -> None:
+    """Send a trigger signal robustly so observers never break trigger execution."""
+    signal.send_robust(sender=sender, event=event, run_id=run_id, **kwargs)
+
 
 User = get_user_model()
 
@@ -41,11 +56,89 @@ class Trigger(PolymorphicModel):
             user_queryset = condition.filter_user_queryset(user_queryset)
         return user_queryset
 
-    def on_event(self, user, context: Mapping[str, Any]):
-        if user and all(condition.is_satisfied(user) for condition in self.conditions.all()):
-            with Activity.lock(user, self):
-                for action in self.actions.all():
-                    action.perform(user, context)
+    def on_event(self, user, context: Mapping[str, Any], event: 'Event', run_id: str):
+        is_allowed = True
+        failed_condition = None
+        for condition in self.conditions.all():
+            if not condition.is_satisfied(user):
+                is_allowed = False
+                if failed_condition is None:
+                    failed_condition = condition
+        _send_trigger_signal(
+            Condition.checked,
+            sender=self.__class__,
+            event=event,
+            run_id=run_id,
+            trigger=self,
+            user_pk=user.pk,
+            is_satisfied=is_allowed,
+            failed_condition=failed_condition,
+        )
+        if user and is_allowed:
+            action_error: Optional[Exception] = None
+            failed_action = None
+            try:
+                with Activity.lock(user, self):
+                    for action in self.actions.all():
+                        try:
+                            action.perform(user, context)
+                        except Exception as error:
+                            action_error = error
+                            failed_action = action
+                            raise
+                        else:
+                            _send_trigger_signal(
+                                Action.performed,
+                                sender=self.__class__,
+                                event=event,
+                                run_id=run_id,
+                                trigger=self,
+                                user_pk=user.pk,
+                                action=action,
+                            )
+            except Exception:
+                pass  # stored in action_error; signals emitted below outside the atomic block
+
+            if action_error is not None:
+                _send_trigger_signal(
+                    Action.failed,
+                    sender=self.__class__,
+                    event=event,
+                    run_id=run_id,
+                    trigger=self,
+                    user_pk=user.pk,
+                    action=failed_action,
+                    error=action_error,
+                )
+                _send_trigger_signal(
+                    Event.handled,
+                    sender=self.__class__,
+                    event=event,
+                    run_id=run_id,
+                    trigger=self,
+                    user_pk=user.pk,
+                    trigger_outcome=TriggerOutcome.ACTION_FAILED,
+                )
+                raise action_error
+            _send_trigger_signal(
+                Event.handled,
+                sender=self.__class__,
+                event=event,
+                run_id=run_id,
+                trigger=self,
+                user_pk=user.pk,
+                trigger_outcome=TriggerOutcome.SUCCEEDED,
+            )
+        elif user:
+            _send_trigger_signal(
+                Event.handled,
+                sender=self.__class__,
+                event=event,
+                run_id=run_id,
+                trigger=self,
+                user_pk=user.pk,
+                trigger_outcome=TriggerOutcome.SKIPPED_FOR_QUERYSET,
+            )
 
 
 class Activity(PolymorphicModel):
@@ -102,6 +195,8 @@ class Action(PolymorphicModel):
         verbose_name=_('trigger'),
         null=True
     )
+    performed = Signal()
+    failed = Signal()
 
     class Meta:
         verbose_name = _('action')
@@ -132,6 +227,9 @@ class Event(PolymorphicModel):
         ),
     )
     fired = Signal()
+    received = Signal()
+    user_resolved = Signal()
+    handled = Signal()
 
     class Meta:
         verbose_name = _('event')
@@ -152,17 +250,53 @@ class Event(PolymorphicModel):
         if self.should_be_fired(**kwargs):
             prefiltered_user_queryset = self.trigger.filter_user_queryset(user_queryset)
             for user_pk in prefiltered_user_queryset.values_list('pk', flat=True).iterator():
-                self.fired.send(self.__class__, event=self, user_pk=user_pk, **kwargs)
+                run_id = uuid.uuid4().hex
+                _send_trigger_signal(
+                    Event.fired,
+                    sender=self.__class__,
+                    event=self,
+                    run_id=run_id,
+                    user_pk=user_pk,
+                    **kwargs,
+                )
 
     def fire_single(self, user_pk: Any, **kwargs):
         self.fire(User.objects.filter(pk=user_pk), **kwargs)
 
-    def handle(self, user_pk, **context):
+    def handle(self, user_pk, run_id: str = "", **context):
+        run_id = run_id or uuid.uuid4().hex
+        _send_trigger_signal(
+            self.received,
+            sender=self.__class__,
+            event=self,
+            run_id=run_id,
+            user_pk=user_pk,
+            **context,
+        )
+        # Filter by conditions again (conditions may have changed between fire() and handle())
         user_queryset = self.trigger.filter_user_queryset(User.objects.filter(pk=user_pk))
         user = user_queryset.first()
+        _send_trigger_signal(
+            self.user_resolved,
+            sender=self.__class__,
+            event=self,
+            run_id=run_id,
+            user_pk=user_pk,
+            is_found=bool(user),
+        )
         if user:
             user_context = self.get_user_context(user, context)
-            self.trigger.on_event(user, user_context)
+            self.trigger.on_event(user, context=user_context, event=self, run_id=run_id)
+        else:
+            _send_trigger_signal(
+                self.handled,
+                sender=self.__class__,
+                event=self,
+                run_id=run_id,
+                trigger=self.trigger,
+                user_pk=user_pk,
+                trigger_outcome=TriggerOutcome.SKIPPED_FOR_INSTANCE,
+            )
 
 
 class Condition(PolymorphicModel):
@@ -173,6 +307,7 @@ class Condition(PolymorphicModel):
         related_name='conditions',
         related_query_name='condition',
     )
+    checked = Signal()
 
     class Meta:
         verbose_name = _('condition')

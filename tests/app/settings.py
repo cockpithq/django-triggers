@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'more_admin_filters',
     'polymorphic',
     'triggers',
+    'triggers.contrib.logging',
     'tests.app',
 ]
 

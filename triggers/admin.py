@@ -1,6 +1,16 @@
-from typing import Iterable, List, Tuple, Type
+from datetime import datetime
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, cast
+from urllib.parse import urlencode
 
-from django.contrib import admin
+from django import forms
+from django.apps import apps
+from django.contrib import admin, messages
+from django.contrib.admin import helpers
+from django.core.paginator import Paginator
+from django.http import HttpRequest, HttpResponseRedirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.utils import timezone
 from django.utils.html import format_html_join
 from django.utils.translation import gettext_lazy as _
 from more_admin_filters import MultiSelectRelatedOnlyFilter
@@ -95,6 +105,10 @@ def create_related_filter(title):
     return type("_RelatedFilter", (RelatedOnlyFieldMultiListFilter,), {"title": title})
 
 
+class TriggerRunsForm(forms.Form):
+    email = forms.EmailField(label=_("User email"))
+
+
 @admin.register(Trigger)
 class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
     inlines = (
@@ -117,6 +131,18 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
         ("action__polymorphic_ctype", create_related_filter(_("action"))),
     )
     polymorphic_list = True
+    actions = ("view_user_execution_logs",)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "execution-logs/",
+                self.admin_site.admin_view(self.execution_logs_timeline_view),
+                name="triggers_trigger_execution_logs",
+            ),
+        ]
+        return custom_urls + urls
 
     def get_queryset(self, request):
         base_queryset = super().get_queryset(request)
@@ -146,6 +172,298 @@ class TriggerAdmin(PolymorphicInlineSupportMixin, admin.ModelAdmin):
             "\n",
             "<li>{0}</li>",
             sorted((str(action).capitalize(),) for action in obj.actions.all()),
+        )
+
+    @admin.action(description=_("View user execution logs"))
+    def view_user_execution_logs(self, request: HttpRequest, queryset):
+        if not queryset.exists():
+            self.message_user(
+                request,
+                _("Please select at least one trigger."),
+                level=messages.ERROR,
+            )
+            return None
+
+        selected_trigger_ids = sorted(queryset.values_list("pk", flat=True))
+        selected_triggers = list(queryset.order_by("name"))
+
+        form = TriggerRunsForm(request.POST or None)
+        if request.POST.get("apply") and form.is_valid():
+            query_string = urlencode(
+                {
+                    "trigger_ids": ",".join(str(trigger_id) for trigger_id in selected_trigger_ids),
+                    "email": form.cleaned_data["email"],
+                }
+            )
+            url = reverse("admin:triggers_trigger_execution_logs")
+            return HttpResponseRedirect(f"{url}?{query_string}")
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "queryset": queryset,
+            "form": form,
+            "title": _("View user execution logs timeline"),
+            "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+            "action_name": "view_user_execution_logs",
+            "triggers": selected_triggers,
+        }
+        return TemplateResponse(
+            request,
+            "admin/triggers/trigger/execution_logs_action.html",
+            context,
+        )
+
+    def _get_status_badge(self, status: str) -> Dict[str, str]:
+        status_styles = {
+            "succeeded": {
+                "background": "#dcfce7",
+                "color": "#166534",
+            },
+            "conditions_failed": {
+                "background": "#fef3c7",
+                "color": "#92400e",
+            },
+            "action_failed": {
+                "background": "#fee2e2",
+                "color": "#991b1b",
+            },
+            "skipped": {
+                "background": "#e5e7eb",
+                "color": "#374151",
+            },
+            "started": {
+                "background": "#dbeafe",
+                "color": "#1e3a8a",
+            },
+            "enqueued": {
+                "background": "#ede9fe",
+                "color": "#5b21b6",
+            },
+        }
+        return status_styles.get(
+            status,
+            {
+                "background": "#f3f4f6",
+                "color": "#111827",
+            },
+        )
+
+    def _extract_step_timestamp(self, step: List[Any], step_type: int) -> Optional[int]:
+        if step_type in (1, 2) and len(step) > 2 and isinstance(step[2], int):
+            return step[2]
+        if step_type == 3 and len(step) > 3 and isinstance(step[3], int):
+            return step[3]
+        if step_type == 4:
+            if len(step) > 4 and isinstance(step[4], int):
+                return step[4]
+            if len(step) > 3 and isinstance(step[3], int):
+                return step[3]
+        return None
+
+    def _format_step_timestamp(self, timestamp_ms: int) -> str:
+        dt = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+        return timezone.localtime(dt).strftime("%H:%M:%S.%f")[:-3]
+
+    def _format_step_delta_ms(
+        self,
+        *,
+        previous_timestamp_ms: Optional[int],
+        current_timestamp_ms: int,
+    ) -> Optional[str]:
+        if previous_timestamp_ms is None:
+            return None
+        return f"+{current_timestamp_ms - previous_timestamp_ms} ms"
+
+    def _format_steps(
+        self,
+        *,
+        steps: List[Any],
+        condition_names: Dict[int, str],
+        action_names: Dict[int, str],
+    ) -> List[Dict[str, Optional[str]]]:
+        formatted_steps: List[Dict[str, Optional[str]]] = []
+        previous_timestamp_ms: Optional[int] = None
+        for step in steps:
+            if not isinstance(step, list) or not step:
+                continue
+            step_type = step[0]
+            text: Optional[str] = None
+            if step_type == 1:
+                text = str(_("Event handling started"))
+            elif step_type == 2:
+                user_found = bool(step[1]) if len(step) > 1 else False
+                text = str(_("User resolved: %(status)s")) % {
+                    "status": _("yes") if user_found else _("no")
+                }
+            elif step_type == 3 and len(step) > 1:
+                is_satisfied = bool(step[1])
+                if is_satisfied:
+                    text = str(_("All conditions passed"))
+                else:
+                    failed_condition_id = step[2] if len(step) > 2 else None
+                    if failed_condition_id is not None:
+                        condition_name = condition_names.get(
+                            failed_condition_id,
+                            str(_("Condition #%(id)s")) % {"id": failed_condition_id},
+                        )
+                        text = str(_("Conditions failed: %(condition)s")) % {
+                            "condition": condition_name,
+                        }
+                    else:
+                        text = str(_("Conditions failed"))
+            elif step_type == 4 and len(step) > 2:
+                action_id = step[1]
+                action_name = action_names.get(
+                    action_id,
+                    str(_("Action #%(id)s")) % {"id": action_id},
+                )
+                is_successful = bool(step[2])
+                if is_successful:
+                    text = str(_("%(action)s -> performed")) % {"action": action_name}
+                else:
+                    error_name = step[3] if len(step) > 3 else _("Unknown error")
+                    text = str(_("%(action)s -> failed (%(error)s)")) % {
+                        "action": action_name,
+                        "error": error_name,
+                    }
+            if not text:
+                continue
+            timestamp_ms = self._extract_step_timestamp(step, step_type)
+            step_time = (
+                self._format_step_timestamp(timestamp_ms)
+                if timestamp_ms is not None
+                else None
+            )
+            step_delta = (
+                self._format_step_delta_ms(
+                    previous_timestamp_ms=previous_timestamp_ms,
+                    current_timestamp_ms=timestamp_ms,
+                )
+                if timestamp_ms is not None
+                else None
+            )
+            if timestamp_ms is not None:
+                previous_timestamp_ms = timestamp_ms
+            formatted_steps.append(
+                {
+                    "text": text,
+                    "time": step_time,
+                    "delta": step_delta,
+                }
+            )
+        return formatted_steps
+
+    def execution_logs_timeline_view(self, request: HttpRequest):
+        if not apps.is_installed("triggers.contrib.logging"):
+            self.message_user(
+                request,
+                _("triggers.contrib.logging is not installed."),
+                level=messages.ERROR,
+            )
+            return HttpResponseRedirect(reverse("admin:triggers_trigger_changelist"))
+
+        trigger_ids_raw = request.GET.get("trigger_ids", "")
+        single_trigger_id = request.GET.get("trigger_id", "")
+        email = request.GET.get("email", "").strip()
+
+        if trigger_ids_raw:
+            trigger_ids = [
+                int(trigger_id)
+                for trigger_id in trigger_ids_raw.split(",")
+                if trigger_id.strip().isdigit()
+            ]
+        elif single_trigger_id.isdigit():
+            trigger_ids = [int(single_trigger_id)]
+        else:
+            trigger_ids = []
+
+        triggers = list(
+            Trigger.objects.filter(pk__in=trigger_ids)
+            .prefetch_related("conditions", "actions")
+            .order_by("name")
+        )
+        trigger_ids_set = {trigger.pk for trigger in triggers}
+        trigger = triggers[0] if len(triggers) == 1 else None
+        trigger_ids_query = ",".join(str(trigger_id) for trigger_id in trigger_ids)
+        page_number = request.GET.get("page", "1")
+
+        logs = []
+        user = None
+        page_obj = None
+        if triggers and email:
+            execution_log_model = apps.get_model("triggers_logging", "TriggerRun")
+            email_field_name = User.get_email_field_name()
+            user = User.objects.filter(**{f"{email_field_name}__iexact": email}).first()
+            if user:
+                condition_names_by_trigger: Dict[int, Dict[int, str]] = {
+                    trigger_obj.pk: {
+                        condition.pk: str(condition)
+                        for condition in trigger_obj.conditions.all()
+                        if condition.pk is not None
+                    }
+                    for trigger_obj in triggers
+                    if trigger_obj.pk is not None
+                }
+                action_names_by_trigger: Dict[int, Dict[int, str]] = {
+                    trigger_obj.pk: {
+                        action.pk: str(action)
+                        for action in trigger_obj.actions.all()
+                        if action.pk is not None
+                    }
+                    for trigger_obj in triggers
+                    if trigger_obj.pk is not None
+                }
+                default_names: Dict[int, str] = {}
+                raw_logs = execution_log_model.objects.filter(
+                    trigger_id__in=trigger_ids_set,
+                    user=user,
+                ).select_related("trigger").order_by("-created_at", "-pk")
+                paginator = Paginator(raw_logs, 50)
+                page_obj = paginator.get_page(page_number)
+                logs = [
+                    {
+                        "log": log,
+                        "status_badge": self._get_status_badge(log.status),
+                        "steps": self._format_steps(
+                            steps=list(log.timeline),
+                            condition_names=condition_names_by_trigger.get(
+                                cast(int, log.trigger_id),
+                                default_names,
+                            ),
+                            action_names=action_names_by_trigger.get(
+                                cast(int, log.trigger_id),
+                                default_names,
+                            ),
+                        ),
+                    }
+                    for log in page_obj.object_list
+                ]
+
+        pagination_query = urlencode(
+            {
+                "trigger_ids": trigger_ids_query,
+                "email": email,
+            }
+        )
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("Execution logs timeline"),
+            "trigger": trigger,
+            "triggers": triggers,
+            "trigger_ids_query": trigger_ids_query,
+            "email": email,
+            "user": user,
+            "logs": logs,
+            "page_obj": page_obj,
+            "pagination_query": pagination_query,
+        }
+        return TemplateResponse(
+            request,
+            "admin/triggers/trigger/execution_logs_timeline.html",
+            context,
         )
 
 
